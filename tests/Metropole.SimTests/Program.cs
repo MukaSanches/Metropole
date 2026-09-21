@@ -10,6 +10,7 @@ var tests = new List<(string Name, Action Run)>
     ("ações jogáveis preservam invariantes", TestPlayableActions),
     ("relógio horário e vida do jogador", TestHourlyLife),
     ("branding, estratégia e finanças empresariais", TestDeepBusiness),
+    ("matriz multi-seed de estabilidade econômica", TestEconomyStressMatrix),
     ("save/load atômico", TestSaveRoundTrip),
     ("simulação longa sem invariantes quebradas", TestLongRun)
 };
@@ -153,6 +154,36 @@ static void TestDeepBusiness()
     Check(company.ProductQuality is >= 0m and <= 1m, "qualidade inválida");
     Check(company.MarketShare is >= 0m and <= 1m, "market share inválido");
     SimulationValidator.Validate(engine.State);
+}
+
+
+static void TestEconomyStressMatrix()
+{
+    var seeds = new long[] { 11, 73, 707, 2026, 8080, 424242, 20260921, 998877 };
+    var unemployment = new List<decimal>();
+    var companies = new List<int>();
+
+    foreach (var seed in seeds)
+    {
+        var engine = new SimulationEngine(WorldGenerator.Generate(seed, $"Stress {seed}"));
+        engine.AdvanceDays(1_825);
+        SimulationValidator.Validate(engine.State);
+
+        unemployment.Add(engine.State.UnemploymentRate);
+        companies.Add(engine.State.OpenCompanies);
+
+        Check(engine.State.Population > 900, $"seed {seed}: população caiu demais");
+        Check(engine.State.OpenCompanies >= 60, $"seed {seed}: poucas empresas abertas ({engine.State.OpenCompanies})");
+        Check(engine.State.UnemploymentRate < 0.68m, $"seed {seed}: desemprego extremo ({engine.State.UnemploymentRate:P1})");
+        Check(engine.State.Companies.Where(c => c.Open).All(c => c.Cash >= 0m), $"seed {seed}: empresa aberta com caixa negativo");
+        Check(engine.State.Companies.Where(c => c.Open).All(c => c.MarketShare is >= 0m and <= 1m), $"seed {seed}: market share inválido");
+    }
+
+    var avgUnemployment = unemployment.Average();
+    var avgCompanies = companies.Average();
+    Check(avgUnemployment < 0.55m, $"média de desemprego alta: {avgUnemployment:P1}");
+    Check(avgCompanies >= 90, $"média de empresas baixa: {avgCompanies:N1}");
+    Console.WriteLine($"       matriz {seeds.Length} seeds/5 anos: desemprego médio {avgUnemployment:P1}; empresas médias {avgCompanies:N1}; pior desemprego {unemployment.Max():P1}; mínimo empresas {companies.Min()}.");
 }
 
 static void TestSaveRoundTrip()
