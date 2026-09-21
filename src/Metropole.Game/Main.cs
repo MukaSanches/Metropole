@@ -168,8 +168,10 @@ public partial class Main : Control
         }
     }
 
-    private void ValidateCriticalLayout(Vector2I viewportSize)
+    private void ValidateCriticalLayout(Vector2I requestedWindowSize)
     {
+        var logicalViewport = GetViewport().GetVisibleRect().Size;
+
         foreach (var name in new[] { "TopBar", "NavigationPanel", "MapPanel", "SidebarPanel", "StatusBar" })
         {
             if (FindChild(name, true, false) is not Control control)
@@ -178,10 +180,29 @@ public partial class Main : Control
             var rect = control.GetGlobalRect();
             if (rect.Position.X < -1f ||
                 rect.Position.Y < -1f ||
-                rect.End.X > viewportSize.X + 1f ||
-                rect.End.Y > viewportSize.Y + 1f)
+                rect.End.X > logicalViewport.X + 1f ||
+                rect.End.Y > logicalViewport.Y + 1f)
                 throw new InvalidOperationException(
-                    $"Layout cortado em {viewportSize.X}x{viewportSize.Y}: {name}={rect}.");
+                    $"Layout cortado em janela {requestedWindowSize.X}x{requestedWindowSize.Y} / viewport {logicalViewport}: {name}={rect}.");
+
+            ValidateDirectChildContainment(control, requestedWindowSize);
+        }
+    }
+
+    private static void ValidateDirectChildContainment(Control panel, Vector2I requestedWindowSize)
+    {
+        var panelRect = panel.GetGlobalRect();
+
+        foreach (var node in panel.GetChildren())
+        {
+            if (node is not Control child || !child.Visible) continue;
+            if (child is ScrollContainer or SubViewportContainer) continue;
+
+            var childRect = child.GetGlobalRect();
+            if (childRect.Position.X < panelRect.Position.X - 2f ||
+                childRect.End.X > panelRect.End.X + 2f)
+                throw new InvalidOperationException(
+                    $"Conteúdo horizontal cortado em {requestedWindowSize.X}x{requestedWindowSize.Y}: {panel.Name}/{child.Name}={childRect}, painel={panelRect}.");
         }
     }
 
@@ -372,7 +393,7 @@ public partial class Main : Control
     {
         var panel = MakePanel(_panel, 12);
         panel.Name = "TopBar";
-        panel.CustomMinimumSize = new Vector2(0, 112);
+        panel.CustomMinimumSize = new Vector2(0, 108);
 
         var stack = new VBoxContainer();
         stack.AddThemeConstantOverride("separation", 6);
@@ -382,7 +403,7 @@ public partial class Main : Control
         infoRow.AddThemeConstantOverride("separation", 8);
         stack.AddChild(infoRow);
 
-        var brand = new HBoxContainer { CustomMinimumSize = new Vector2(160, 0) };
+        var brand = new HBoxContainer { CustomMinimumSize = new Vector2(148, 0) };
         brand.AddThemeConstantOverride("separation", 7);
         brand.AddChild(MakeIcon("app_icon", 34));
         var bt = new VBoxContainer();
@@ -393,9 +414,9 @@ public partial class Main : Control
         infoRow.AddChild(brand);
         infoRow.AddChild(MakeVSeparator());
 
-        _dateLabel = MakeTopStat(infoRow, "DATA", 92);
-        _cashLabel = MakeTopStat(infoRow, "PATRIMÔNIO", 132, _gold);
-        _jobLabel = MakeTopStat(infoRow, "ATIVIDADE", 160);
+        _dateLabel = MakeTopStat(infoRow, "DATA", 82);
+        _cashLabel = MakeTopStat(infoRow, "PATRIMÔNIO", 116, _gold);
+        _jobLabel = MakeTopStat(infoRow, "ATIVIDADE", 145);
 
         infoRow.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
 
@@ -424,8 +445,10 @@ public partial class Main : Control
         day.Pressed += () => AdvanceOneDay(true);
         controlRow.AddChild(day);
 
-        controlRow.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
-        controlRow.AddChild(MakeLabel("Ctrl+S salva • roda do mouse aproxima • clique em pessoas para interagir", 9, _muted2, false));
+        var topHint = MakeLabel("Ctrl+S salva • roda aproxima • clique em pessoas para interagir", 9, _muted2, true);
+        topHint.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        topHint.HorizontalAlignment = HorizontalAlignment.Right;
+        controlRow.AddChild(topHint);
 
         return panel;
     }
@@ -434,7 +457,7 @@ public partial class Main : Control
     {
         var panel = MakePanel(_panel, 15);
         panel.Name = "NavigationPanel";
-        panel.CustomMinimumSize = new Vector2(176, 0);
+        panel.CustomMinimumSize = new Vector2(164, 0);
         panel.SizeFlagsVertical = SizeFlags.ExpandFill;
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 6);
@@ -472,7 +495,7 @@ public partial class Main : Control
     {
         var panel = MakePanel(_panel, 15);
         panel.Name = "MapPanel";
-        panel.CustomMinimumSize = new Vector2(400, 0);
+        panel.CustomMinimumSize = new Vector2(360, 0);
         panel.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         panel.SizeFlagsVertical = SizeFlags.ExpandFill;
 
@@ -480,7 +503,9 @@ public partial class Main : Control
         box.AddThemeConstantOverride("separation", 8);
         panel.AddChild(box);
 
-        var head = new HBoxContainer();
+        var head = new HFlowContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        head.AddThemeConstantOverride("h_separation", 7);
+        head.AddThemeConstantOverride("v_separation", 4);
         var titles = new VBoxContainer();
         titles.AddThemeConstantOverride("separation", 0);
         titles.AddChild(MakeLabel("CIDADE EM TEMPO REAL", 14, _text, false));
@@ -532,8 +557,9 @@ public partial class Main : Control
             frame.AddChild(_cityView);
         }
 
-        var footer = new HBoxContainer();
-        footer.AddThemeConstantOverride("separation", 10);
+        var footer = new HFlowContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        footer.AddThemeConstantOverride("h_separation", 8);
+        footer.AddThemeConstantOverride("v_separation", 4);
         footer.AddChild(MakeLegend(_accent, "Seu bairro"));
         footer.AddChild(MakeLegend(_gold, "Sua empresa"));
         footer.AddChild(MakeLegend(_muted, "Economia local"));
@@ -569,7 +595,7 @@ public partial class Main : Control
     {
         var panel = MakePanel(_panel, 15);
         panel.Name = "SidebarPanel";
-        panel.CustomMinimumSize = new Vector2(320, 0);
+        panel.CustomMinimumSize = new Vector2(300, 0);
         panel.SizeFlagsVertical = SizeFlags.ExpandFill;
 
         var scroll = new ScrollContainer
@@ -643,8 +669,9 @@ public partial class Main : Control
             : null;
 
         _dateLabel!.Text = $"D{s.CurrentDay:N0} • {s.CurrentHour:00}:00 • Ano {1 + s.CurrentDay / 365}";
-        _cashLabel!.Text = $"Cr$ {s.Player.Cash:N2}";
-        _jobLabel!.Text = employer?.Name ?? "Em busca de trabalho";
+        _cashLabel!.Text = FormatCompactMoney(s.Player.Cash);
+        _jobLabel!.Text = employer is null ? "Em busca de trabalho" : CompanyDisplayName(employer);
+        _jobLabel.TooltipText = employer?.Name ?? "Em busca de trabalho";
         _mapSubtitle!.Text = $"{s.Population:N0} hab. • {s.OpenCompanies:N0} empresas • {s.Weather} {s.TemperatureC:0}°C • confiança {s.CityConfidence:P0}";
         _cityView?.QueueRedraw();
         _premiumCityView?.RefreshFromSimulation();
@@ -1146,7 +1173,8 @@ public partial class Main : Control
         var box = new VBoxContainer { CustomMinimumSize = new Vector2(width, 0) };
         box.AddThemeConstantOverride("separation", 0);
         box.AddChild(MakeLabel(caption, 9, _muted2, false));
-        var value = MakeLabel("", 12, color ?? _text, false);
+        var value = MakeLabel("", 12, color ?? _text, true);
+        value.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         box.AddChild(value);
         parent.AddChild(box);
         return value;
@@ -2150,5 +2178,15 @@ public partial class Main : Control
 
     private static string CompanyDisplayName(CompanyState company) =>
         string.IsNullOrWhiteSpace(company.BrandName) ? company.Name : company.BrandName;
+
+    private static string FormatCompactMoney(decimal value)
+    {
+        var abs = Math.Abs(value);
+        if (abs >= 1_000_000_000_000m) return $"Cr$ {value / 1_000_000_000_000m:N2} tri";
+        if (abs >= 1_000_000_000m) return $"Cr$ {value / 1_000_000_000m:N2} bi";
+        if (abs >= 1_000_000m) return $"Cr$ {value / 1_000_000m:N2} mi";
+        if (abs >= 1_000m) return $"Cr$ {value / 1_000m:N1} mil";
+        return $"Cr$ {value:N2}";
+    }
 
 }
