@@ -372,7 +372,11 @@ public partial class Main : Control
         margin.AddThemeConstantOverride("margin_bottom", 10);
         AddChild(margin);
 
-        var root = new VBoxContainer();
+        var root = new VBoxContainer
+        {
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            SizeFlagsVertical = SizeFlags.ExpandFill
+        };
         root.AddThemeConstantOverride("separation", 9);
         margin.AddChild(root);
         root.AddChild(BuildTopBar());
@@ -459,9 +463,19 @@ public partial class Main : Control
         panel.Name = "NavigationPanel";
         panel.CustomMinimumSize = new Vector2(164, 0);
         panel.SizeFlagsVertical = SizeFlags.ExpandFill;
-        var box = new VBoxContainer();
+
+        var navScroll = new ScrollContainer
+        {
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            SizeFlagsVertical = SizeFlags.ExpandFill,
+            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+            VerticalScrollMode = ScrollContainer.ScrollMode.Auto
+        };
+        panel.AddChild(navScroll);
+
+        var box = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         box.AddThemeConstantOverride("separation", 6);
-        panel.AddChild(box);
+        navScroll.AddChild(box);
 
         box.AddChild(MakeLabel("CENTRAL", 10, _muted2, false));
         AddNav(box, "Visão geral", SidebarMode.Visao, "overview");
