@@ -10,6 +10,7 @@ var tests = new List<(string Name, Action Run)>
     ("ações jogáveis preservam invariantes", TestPlayableActions),
     ("relógio horário e vida do jogador", TestHourlyLife),
     ("branding, estratégia e finanças empresariais", TestDeepBusiness),
+    ("amizade, namoro, casamento e família", TestSocialLifecycle),
     ("matriz multi-seed de estabilidade econômica", TestEconomyStressMatrix),
     ("save/load atômico", TestSaveRoundTrip),
     ("simulação longa sem invariantes quebradas", TestLongRun)
@@ -156,6 +157,60 @@ static void TestDeepBusiness()
     SimulationValidator.Validate(engine.State);
 }
 
+
+static void TestSocialLifecycle()
+{
+    var engine = new SimulationEngine(WorldGenerator.Generate(1515, "Social"));
+    var state = engine.State;
+    state.CurrentHour = 12;
+    state.Player.Cash = 25_000m;
+
+    var person = state.Citizens
+        .First(c => c.Alive && c.AgeYears >= 20 && c.DistrictId == state.Player.DistrictId);
+
+    person.CurrentActivity = "Lazer";
+    person.PartnerCitizenId = null;
+    person.IsPlayerPartner = false;
+    person.PlayerFamiliarity = 0m;
+    person.PlayerAffinity = 0m;
+    person.PlayerTrust = 0m;
+
+    Check(engine.MeetPerson(person.Id), "não foi possível conhecer pessoa acessível");
+    Check(person.PlayerFamiliarity > 0m, "familiaridade não foi criada");
+
+    var moneyBeforeHangout = state.TotalLiquidMoney();
+    Check(engine.HangOutWithPerson(person.Id), "saída social válida falhou");
+    Check(Math.Abs(state.TotalLiquidMoney() - moneyBeforeHangout) <= 0.02m, "saída social criou/destruiu dinheiro");
+
+    person.PlayerFamiliarity = 80m;
+    person.PlayerAffinity = 82m;
+    person.PlayerTrust = 72m;
+    person.CurrentActivity = "Lazer";
+    Check(engine.AskToDate(person.Id), "pedido de namoro válido falhou");
+    Check(state.Player.PartnerCitizenId == person.Id && person.IsPlayerPartner, "namoro não vinculou jogador e cidadão");
+
+    state.Player.RelationshipStartDay = state.CurrentDay - 35;
+    person.PlayerAffinity = 90m;
+    person.PlayerTrust = 84m;
+    state.Player.Cash = Math.Max(state.Player.Cash, 20_000m);
+    var moneyBeforeMarriage = state.TotalLiquidMoney();
+    Check(engine.ProposeMarriage(), "casamento válido falhou");
+    Check(state.Player.RelationshipStatus == "Casado", "estado de casamento não foi aplicado");
+    Check(Math.Abs(state.TotalLiquidMoney() - moneyBeforeMarriage) <= 0.02m, "casamento criou/destruiu dinheiro");
+
+    state.Player.MarriageDay = state.CurrentDay - 40;
+    person.PlayerAffinity = 92m;
+    person.PlayerTrust = 90m;
+    state.Player.Cash = Math.Max(state.Player.Cash, 20_000m);
+    var populationBefore = state.Population;
+    var moneyBeforeChild = state.TotalLiquidMoney();
+    Check(engine.PlanChild(), "planejamento familiar válido falhou");
+    Check(state.Player.Children >= 1, "filho não foi registrado");
+    Check(state.Population == populationBefore + 1, "novo filho não entrou na população");
+    Check(Math.Abs(state.TotalLiquidMoney() - moneyBeforeChild) <= 0.02m, "planejamento familiar criou/destruiu dinheiro");
+
+    SimulationValidator.Validate(state);
+}
 
 static void TestEconomyStressMatrix()
 {
