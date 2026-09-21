@@ -6,7 +6,7 @@ namespace Metropole.Game;
 
 public partial class Main : Control
 {
-    private enum SidebarMode { Visao, Cidade, Carreira, Mercado, Empresas, Historico, Ajuda }
+    private enum SidebarMode { Visao, Vida, Pessoas, Cidade, Carreira, Mercado, Empresas, Historico, Ajuda }
 
     private SimulationEngine? _sim;
     private CityView? _cityView;
@@ -50,7 +50,7 @@ public partial class Main : Control
         while (_tickAccumulator >= 1.0)
         {
             _tickAccumulator -= 1.0;
-            AdvanceOneDay(false);
+            AdvanceSimulationHour();
         }
     }
 
@@ -283,6 +283,8 @@ public partial class Main : Control
 
         box.AddChild(MakeLabel("CENTRAL", 10, _muted2, false));
         AddNav(box, "Visão geral", SidebarMode.Visao, "overview");
+        AddNav(box, "Vida", SidebarMode.Vida, "life");
+        AddNav(box, "Pessoas", SidebarMode.Pessoas, "people");
         AddNav(box, "Cidade", SidebarMode.Cidade, "city");
         AddNav(box, "Carreira", SidebarMode.Carreira, "career");
         AddNav(box, "Mercado", SidebarMode.Mercado, "market");
@@ -429,10 +431,10 @@ public partial class Main : Control
             ? s.Companies.FirstOrDefault(c => c.Id == employerId)
             : null;
 
-        _dateLabel!.Text = $"Dia {s.CurrentDay:N0} • Ano {1 + s.CurrentDay / 365}";
+        _dateLabel!.Text = $"D{s.CurrentDay:N0} • {s.CurrentHour:00}:00 • Ano {1 + s.CurrentDay / 365}";
         _cashLabel!.Text = $"Cr$ {s.Player.Cash:N2}";
         _jobLabel!.Text = employer?.Name ?? "Em busca de trabalho";
-        _mapSubtitle!.Text = $"{s.Population:N0} habitantes • {s.OpenCompanies:N0} empresas • desemprego {s.UnemploymentRate:P1}";
+        _mapSubtitle!.Text = $"{s.Population:N0} hab. • {s.OpenCompanies:N0} empresas • {s.Weather} {s.TemperatureC:0}°C • confiança {s.CityConfidence:P0}";
         _cityView?.QueueRedraw();
         UpdateNavState();
         RefreshSidebar();
@@ -445,10 +447,12 @@ public partial class Main : Control
         switch (_mode)
         {
             case SidebarMode.Visao: BuildOverview(); break;
+            case SidebarMode.Vida: BuildLife(); break;
+            case SidebarMode.Pessoas: BuildPeople(); break;
             case SidebarMode.Cidade: BuildCity(); break;
             case SidebarMode.Carreira: BuildCareer(); break;
             case SidebarMode.Mercado: BuildMarket(); break;
-            case SidebarMode.Empresas: BuildBusiness(); break;
+            case SidebarMode.Empresas: BuildBusinessDeep(); break;
             case SidebarMode.Historico: BuildHistory(); break;
             case SidebarMode.Ajuda: BuildHelp(); break;
         }
@@ -561,18 +565,24 @@ public partial class Main : Control
                 $"{employer?.Sector ?? "Setor"} • Cr$ {s.Player.DailyWage:N2}/dia", _accent));
             _sidebar.AddChild(MakeProgressStat("Energia para trabalhar", s.Player.Energy, s.Player.Energy < 30 ? _danger : _accent));
 
-            var work = MakeButton("TRABALHAR +1 DIA", true, "career");
+            var work = MakeButton("TRABALHAR 8H", true, "career");
             work.CustomMinimumSize = new Vector2(0, 50);
             work.Disabled = s.Player.Energy < 18m;
             work.Pressed += () =>
             {
-                s.Player.Energy = Math.Max(0m, s.Player.Energy - 18m);
-                AdvanceOneDay(true);
+                _sim.WorkShift(8);
+                SetStatus("Turno de 8 horas concluído.");
+                RefreshAll();
             };
             _sidebar.AddChild(work);
 
-            var rest = MakeButton("DESCANSAR +1 DIA", false);
-            rest.Pressed += () => AdvanceOneDay(true);
+            var rest = MakeButton("DORMIR 8H", false);
+            rest.Pressed += () =>
+            {
+                _sim.Sleep(8);
+                SetStatus("Você dormiu 8 horas.");
+                RefreshAll();
+            };
             _sidebar.AddChild(rest);
 
             var quit = MakeButton("PEDIR DEMISSÃO", false);
@@ -799,7 +809,7 @@ public partial class Main : Control
         if (_sim is null) return;
         try
         {
-            _sim.AdvanceOneDay();
+            _sim.AdvanceHours(24);
             if (_sim.State.CurrentDay % 30 == 0) SaveStore.Save(SavePath, _sim.State);
             if (manual) SetStatus($"Dia {_sim.State.CurrentDay:N0} concluído.");
             RefreshAll();
