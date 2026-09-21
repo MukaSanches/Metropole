@@ -2,9 +2,9 @@
 
 METRÓPOLE ∞ é um simulador sistêmico para Windows em que vida pessoal, trabalho, empresas, mercados, bairros e cidadãos evoluem continuamente.
 
-## Versão 1.2.0 — Vida & Empresas Profundas
+## Versão 1.3.0 — Renderer Adaptativo & Cidade Viva
 
-A 1.2 amplia o jogo de um simulador econômico para uma simulação integrada de vida e negócios:
+A 1.3 mantém a simulação profunda da 1.2 e adiciona uma camada gráfica adaptativa para aumentar a riqueza visual sem sacrificar PCs modestos:
 
 - relógio horário com rotina diária, trabalho, sono, estudo, lazer e deslocamento;
 - necessidades de energia, fome, saúde, estresse, felicidade, vida social e condicionamento;
@@ -32,8 +32,10 @@ A arquitetura da 1.2 foi pesquisada contra padrões de simuladores de vida, cida
 
 - Godot Engine 4.7.2 stable .NET
 - C# / .NET 8
-- Compatibility renderer
+- Compatibility renderer com qualidade adaptativa
 - desenho procedural 2D via CanvasItem
+- perfis Auto/Ultra/Alto/Equilibrado/Leve
+- escalonamento dinâmico de densidade visual
 - núcleo de simulação separado da camada gráfica
 - Inno Setup para Windows
 - assets SVG próprios
