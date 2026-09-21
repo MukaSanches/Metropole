@@ -268,8 +268,8 @@ public sealed partial class SimulationEngine
             if (market.Stock <= 0.01m) continue;
 
             var budget = citizen.EmployedCompanyId is null
-                ? 5m + citizen.SkillTier
-                : 12m + citizen.SkillTier * 2m;
+                ? 10m + citizen.SkillTier * 3m
+                : 50m + citizen.SkillTier * 7m;
             budget = Math.Min(budget, citizen.Cash);
             if (budget <= 0m) continue;
 
@@ -355,7 +355,7 @@ public sealed partial class SimulationEngine
         foreach (var company in State.Companies.Where(c => c.Open && c.EmployeeIds.Count < c.DesiredEmployees))
         {
             if (company.Cash < company.BaseWage * 20m) continue;
-            if (!rng.Chance(0.18)) continue;
+            if (!rng.Chance(0.36)) continue;
 
             var candidate = State.Citizens
                 .Where(c => c.Alive && c.AgeYears is >= 18 and < 66 && c.EmployedCompanyId is null)
