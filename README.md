@@ -1,27 +1,26 @@
 # METRÓPOLE ∞
 
-METRÓPOLE ∞ é um jogo de simulação sistêmica para Windows em que cidadãos, empresas, mercados e bairros continuam evoluindo sem depender do jogador.
+METRÓPOLE ∞ é um simulador sistêmico para Windows em que cidadãos, empresas, mercados e bairros continuam evoluindo sem depender do jogador.
 
-## Estado da V1.0.0
+## Versão 1.1.0
 
-Esta base implementa um núcleo jogável e verificável:
+Esta versão transforma a primeira base técnica em uma experiência muito mais legível e jogável:
 
-- geração procedural determinística por seed;
-- mapa isométrico 2D gerado em tempo real;
-- população e empresas simuladas localmente;
-- carreiras, vagas, salários e desemprego;
-- consumo, estoques, produção, oferta/demanda e formação de preços;
-- contratação, demissão, crédito, insolvência e falência;
-- abertura de microempresa pelo jogador;
-- necessidades básicas e progressão financeira;
-- calendário e velocidades de simulação independentes do FPS;
-- histórico causal de eventos econômicos;
-- save manual, autosave, backup e gravação atômica;
-- catálogo data-driven/composicional de profissões, negócios, produtos, recursos, edifícios, competências, eventos e tecnologias;
-- testes headless do núcleo de simulação;
-- pipeline Windows com build, testes, export do Godot e instalador Inno Setup.
+- interface refeita com navegação, hierarquia visual e painéis compactos;
+- topbar corrigida: dinheiro, emprego, data e controles não ficam mais espremidos;
+- textos multilinha corrigidos;
+- mapa isométrico procedural redesenhado com edifícios volumétricos, vias, árvores, iluminação e tráfego animado;
+- identidade vetorial própria em SVG;
+- tela inicial refeita;
+- painel de cidade com mudança real de bairro e custo econômico;
+- carreira com trabalhar, descansar e pedir demissão;
+- mercado com compra em quantidades e leitura de oferta/demanda;
+- gestão de empresa com aportes e ajuste de vagas;
+- atalhos Ctrl+S e Esc;
+- janela mínima de 1280×720 para preservar a composição;
+- smoke test do executável exportado e do executável instalado.
 
-O README descreve apenas o que está implementado no código. A distribuição final só deve ser chamada de validada quando o workflow de CI/release estiver verde e o artefato Windows tiver sido executado com sucesso.
+O núcleo continua incluindo geração procedural determinística, população e empresas simuladas, preços dinâmicos, contratação/demissão, crédito, insolvência, demografia, sucessão familiar, save atômico e execução offline.
 
 ## Tecnologia
 
@@ -29,19 +28,19 @@ O README descreve apenas o que está implementado no código. A distribuição f
 - C# / .NET 8
 - núcleo de simulação separado do motor gráfico
 - Inno Setup para o instalador Windows
-
-Veja [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+- assets SVG próprios
 
 ## Jogando
 
-1. Crie um mundo informando nome e seed.
-2. Observe a cidade funcionar no mapa.
-3. Abra **Carreira** e aceite uma vaga.
-4. Use **Trabalhar +1 dia** para avançar e receber salário.
-5. Compre alimentação e acompanhe os preços.
-6. Acumule capital e abra uma microempresa.
-7. Acelere o tempo e observe contratações, demissões, preços, falências e novas empresas.
-8. Salve e continue depois.
+1. Crie um mundo ou continue seu save.
+2. Abra **Carreira** e aceite uma vaga.
+3. Trabalhe para ganhar dinheiro e descanse para recuperar energia.
+4. Use **Mercado** para comprar alimentação e acompanhar a economia.
+5. Explore **Cidade** e mude de bairro quando fizer sentido.
+6. Acumule Cr$ 5.000 e abra sua empresa.
+7. Ajuste vagas, faça aportes e acompanhe o caixa.
+8. Acelere o tempo e observe a cidade evoluir.
+9. Use Ctrl+S para salvar.
 
 ## Build local
 
@@ -56,4 +55,4 @@ godot --headless --path src/Metropole.Game --export-release Windows build/Metrop
 
 ## Licenças
 
-O código deste repositório não concede licença de redistribuição por padrão. O jogo usa Godot Engine sob licença MIT. Consulte [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+O código deste repositório não concede licença de redistribuição por padrão. O jogo usa Godot Engine sob licença MIT. Consulte `THIRD_PARTY_NOTICES.md`.
