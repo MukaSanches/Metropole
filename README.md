@@ -2,9 +2,19 @@
 
 METRÓPOLE ∞ é um simulador sistêmico para Windows em que vida pessoal, trabalho, empresas, mercados, bairros e cidadãos evoluem continuamente.
 
-## Versão 1.3.0 — Renderer Adaptativo
+## Versão 1.4.0 — Assets, Animação & Áudio
 
-A 1.3 preserva toda a simulação de vida e empresas da 1.2 e muda o teto gráfico do jogo.
+A 1.4 mantém a arquitetura adaptativa da 1.3 e substitui parte da aparência de protótipo por conteúdo visual e sonoro real, gratuito e auditado.
+
+### Assets integrados
+
+- prédios urbanos Kenney CC0 usados como landmarks de alta qualidade;
+- luminárias e props urbanos Kenney CC0;
+- seis cidadãos Quaternius CC0, rigados e com animações embutidas;
+- walking animation real para cidadãos próximos da câmera;
+- áudio de tráfego, chuva e vento com licença CC0 rastreada;
+- efeitos de clique e hover Kenney UI Audio;
+- `docs/ASSET_PROVENANCE_V1.4.md` documenta cada origem e licença.
 
 ### Cidade premium
 
@@ -13,17 +23,19 @@ Em hardware compatível, o jogo usa o caminho 3D/2.5D:
 - Godot Forward+;
 - câmera 3D ortográfica isométrica;
 - zoom e pan suaves;
-- prédios 3D procedurais;
+- prédios 3D procedurais para escala + landmarks GLB reais nos perfis High/Ultra;
 - bairros com riqueza/atividade refletidas visualmente;
 - empresa do jogador destacada;
 - estados empresariais refletidos na aparência;
 - estradas, calçadas e malha urbana;
 - árvores instanciadas;
 - tráfego instanciado e variável por horário;
-- pedestres instanciados e afetados por horário/clima;
+- pedestres MultiMesh para escala + cidadãos GLB animados próximos da câmera;
 - iluminação solar dinâmica;
 - dia/noite;
 - chuva e neblina;
+- ambiência dinâmica de trânsito, chuva e vento;
+- feedback sonoro de interface;
 - SSAO, SSIL, glow e volumetric fog ativados somente quando renderer/perfil permitem.
 
 ### Desempenho
@@ -58,7 +70,7 @@ O pipeline Windows testa separadamente:
 
 ## Simulação
 
-A 1.3 mantém os sistemas anteriores:
+A 1.4 mantém os sistemas anteriores:
 
 - relógio horário;
 - energia, fome, saúde, estresse, felicidade, social e condicionamento;
@@ -91,6 +103,9 @@ A 1.3 mantém os sistemas anteriores:
 - Compatibility como fallback
 - SubViewport + Camera3D ortográfica
 - MultiMesh para instancing
+- GLB importado para landmarks e cidadãos próximos
+- AnimationPlayer para clips humanoides
+- AudioServer + buses UI/Ambience/Weather
 - CanvasItem renderer 2D preservado
 - núcleo de simulação separado da camada gráfica
 - Inno Setup para Windows
@@ -102,6 +117,7 @@ A referência permanente do projeto está em:
 - skills/godot-master/SKILL.md
 - docs/GODOT_VISUAL_MECHANICS_ROADMAP.md
 - docs/RESEARCH_V1.2.md
+- docs/ASSET_PROVENANCE_V1.4.md
 
 ## Build local
 
