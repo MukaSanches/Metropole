@@ -215,7 +215,7 @@ public sealed partial class SimulationEngine
         p.Happiness = Clamp(
             p.Happiness
             + employedBonus
-            + (district?.SocialIndex ?? 1m - 1m) * 0.30m
+            + ((district?.SocialIndex ?? 1m) - 1m) * 0.30m
             + (p.Social - 50m) / 100m * 0.35m
             - p.Stress / 100m * 0.30m,
             0m, 100m);
