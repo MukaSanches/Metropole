@@ -177,6 +177,8 @@ static void TestSocialLifecycle()
 
     Check(engine.MeetPerson(person.Id), "não foi possível conhecer pessoa acessível");
     Check(person.PlayerFamiliarity > 0m, "familiaridade não foi criada");
+    Check(engine.TalkToPerson(person.Id), "segunda conversa válida falhou");
+    Check(person.PlayerFamiliarity >= 15m, "familiaridade não avançou após conversa");
 
     var moneyBeforeHangout = state.TotalLiquidMoney();
     Check(engine.HangOutWithPerson(person.Id), "saída social válida falhou");
