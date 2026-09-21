@@ -18,6 +18,7 @@ public partial class PremiumCityView : Control
     private readonly List<(MultiMeshInstance3D Node, int FullCount)> _scalableGroups = [];
     private MultiMeshInstance3D? _vehicles;
     private MultiMeshInstance3D? _pedestrians;
+    private LicensedAssetLayer? _licensedAssets;
 
     private VisualQuality _quality;
     private VisualQuality _ceiling;
@@ -37,7 +38,20 @@ public partial class PremiumCityView : Control
     private int _lastOpenCompanies = -1;
 
     public string Diagnostics =>
-        $"{GraphicsQuality.RenderingMethod}/{GraphicsQuality.RenderingDriver} • {QualityModeLabel} • 3D";
+        $"{GraphicsQuality.RenderingMethod}/{GraphicsQuality.RenderingDriver} • {QualityModeLabel} • 3D" +
+        (_licensedAssets is null ? "" : $" • {_licensedAssets.Diagnostics}");
+
+    public int LicensedBuildingInstances => _licensedAssets?.BuildingInstances ?? 0;
+    public int LicensedVehicleInstances => _licensedAssets?.VehicleInstances ?? 0;
+    public int LicensedCharacterInstances => _licensedAssets?.CharacterInstances ?? 0;
+    public int AnimatedCharacterInstances => _licensedAssets?.AnimatedCharacterInstances ?? 0;
+
+    public void ValidateLicensedAssetsOrThrow()
+    {
+        _licensedAssets?.ValidateOrThrow();
+        if (_licensedAssets is null)
+            throw new InvalidDataException("Camada de assets licenciados não foi criada.");
+    }
 
     public string QualityModeLabel =>
         _manualQuality is VisualQuality fixedQuality
@@ -110,6 +124,7 @@ public partial class PremiumCityView : Control
             UpdateAtmosphere();
             UpdateVehicles();
             UpdatePedestrians();
+            _licensedAssets?.UpdateMotion(_anim);
             _weatherOverlay?.SetAnimationTime(_anim);
         }
     }
@@ -231,12 +246,14 @@ public partial class PremiumCityView : Control
         _scalableGroups.Clear();
         _vehicles = null;
         _pedestrians = null;
+        _licensedAssets = null;
 
         BuildGround();
         BuildRoadNetwork();
         BuildDistricts();
         BuildVehicles();
         BuildPedestrians();
+        BuildLicensedAssets();
         _lastBuiltDay = _engine.State.CurrentDay;
         _lastOpenCompanies = _engine.State.OpenCompanies;
         UpdateAtmosphere();
@@ -509,6 +526,15 @@ public partial class PremiumCityView : Control
         _scalableGroups.Add((_pedestrians, count));
     }
 
+    private void BuildLicensedAssets()
+    {
+        if (_engine is null || _worldRoot is null) return;
+
+        _licensedAssets = new LicensedAssetLayer { Name = "CC0LicensedAssets" };
+        _worldRoot.AddChild(_licensedAssets);
+        _licensedAssets.Build(_engine, _quality);
+    }
+
     private void UpdateVehicles()
     {
         if (_vehicles?.Multimesh is not MultiMesh multi || _engine is null) return;
@@ -654,6 +680,8 @@ public partial class PremiumCityView : Control
 
         if (_sun is not null)
             _sun.ShadowEnabled = _quality >= VisualQuality.Medium;
+
+        _licensedAssets?.ApplyQuality(_quality);
 
         if (_environment is not null && GraphicsQuality.RenderingMethod == "forward_plus")
         {
