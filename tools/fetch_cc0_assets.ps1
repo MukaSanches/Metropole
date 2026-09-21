@@ -78,7 +78,15 @@ $assets = @(
     @("$audioBase/addons/kenney_interface_sounds/scroll_001.wav", "kenney\audio\ui-scroll.wav", 1000),
 
     @("https://opengameart.org/sites/default/files/amb_outdoor1_loop.ogg", "opengameart\audio\city-outdoor.ogg", 20000),
-    @("https://opengameart.org/sites/default/files/amb_rain_loop_1.ogg", "opengameart\audio\rain-loop.ogg", 20000)
+    @("https://opengameart.org/sites/default/files/amb_rain_loop_1.ogg", "opengameart\audio\rain-loop.ogg", 20000),
+
+    @("https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/urban_street_02_1k.hdr", "polyhaven\hdri\urban_street_02_1k.hdr", 500000),
+    @("https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/asphalt_02/asphalt_02_diff_1k.jpg", "polyhaven\textures\asphalt_02_diff_1k.jpg", 100000),
+    @("https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/asphalt_02/asphalt_02_nor_gl_1k.jpg", "polyhaven\textures\asphalt_02_nor_gl_1k.jpg", 100000),
+    @("https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/asphalt_02/asphalt_02_rough_1k.jpg", "polyhaven\textures\asphalt_02_rough_1k.jpg", 50000),
+    @("https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_pavement/concrete_pavement_diff_1k.jpg", "polyhaven\textures\concrete_pavement_diff_1k.jpg", 100000),
+    @("https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_pavement/concrete_pavement_nor_gl_1k.jpg", "polyhaven\textures\concrete_pavement_nor_gl_1k.jpg", 100000),
+    @("https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_pavement/concrete_pavement_rough_1k.jpg", "polyhaven\textures\concrete_pavement_rough_1k.jpg", 50000)
 )
 
 foreach ($asset in $assets) {
@@ -93,4 +101,4 @@ Get-ChildItem $assetsRoot -File -Recurse | Sort-Object FullName | ForEach-Object
 }
 $manifest | Set-Content (Join-Path $assetsRoot "SHA256SUMS.txt") -Encoding UTF8
 
-Write-Host "CC0 asset acquisition complete: $($assets.Count) source files."
+Write-Host "CC0 asset acquisition complete: $($assets.Count) source files (Kenney, OpenGameArt, Poly Haven)."
