@@ -18,6 +18,14 @@ public static class GraphicsQuality
     public static bool SupportsPremium3D =>
         !string.Equals(RenderingMethod, "gl_compatibility", StringComparison.OrdinalIgnoreCase);
 
+    public static bool ForcePremium =>
+        string.Equals(System.Environment.GetEnvironmentVariable("METROPOLE_FORCE_PREMIUM"), "1", StringComparison.Ordinal);
+
+    public static bool ForceFallback =>
+        string.Equals(System.Environment.GetEnvironmentVariable("METROPOLE_FORCE_FALLBACK"), "1", StringComparison.Ordinal);
+
+    public static bool UsePremium3D => !ForceFallback && (ForcePremium || SupportsPremium3D);
+
     public static VisualQuality AutomaticCeiling()
     {
         return RenderingMethod switch
