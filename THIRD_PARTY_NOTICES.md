@@ -56,3 +56,16 @@ Canonical source:
 - https://opengameart.org/content/amb-rain-loop-1
 
 These works are distributed under CC0.
+
+
+## Poly Haven CC0 assets
+
+METRÓPOLE ∞ 1.5 uses selected Poly Haven assets:
+- Urban Street 02 HDRI;
+- Asphalt 02 PBR texture;
+- Concrete Pavement PBR texture.
+
+Poly Haven assets are released under Creative Commons CC0 1.0 Universal.
+Canonical source and license: https://polyhaven.com/license
+
+Detailed source records are maintained in `docs/EXTERNAL_ASSETS_V1.5.md`.
