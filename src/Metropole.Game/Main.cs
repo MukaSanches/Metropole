@@ -440,9 +440,27 @@ public partial class Main : Control
         footer.AddChild(MakeLegend(_gold, "Sua empresa"));
         footer.AddChild(MakeLegend(_muted, "Economia local"));
         footer.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
+
+        if (_premiumCityView is not null)
+        {
+            var graphicsMode = MakeButton($"GRÁFICOS: {_premiumCityView.QualityModeLabel}", false);
+            graphicsMode.CustomMinimumSize = new Vector2(150, 34);
+            graphicsMode.Pressed += () =>
+            {
+                _premiumCityView?.CycleQualityMode();
+                if (_premiumCityView is not null)
+                {
+                    graphicsMode.Text = $"GRÁFICOS: {_premiumCityView.QualityModeLabel}";
+                    SetStatus($"Perfil gráfico: {_premiumCityView.QualityModeLabel}. AUTO adapta densidade ao desempenho.");
+                    if (_graphicsBadge is not null) _graphicsBadge.Text = _premiumCityView.Diagnostics;
+                }
+            };
+            footer.AddChild(graphicsMode);
+        }
+
         footer.AddChild(MakeLabel(
             GraphicsQuality.UsePremium3D
-                ? "2.5D • MultiMesh • qualidade adaptativa • zoom/pan"
+                ? "2.5D • MultiMesh • AUTO adaptativo • zoom/pan"
                 : "fallback leve • dia/noite • clima • tráfego",
             10, _muted2, false));
         box.AddChild(footer);
