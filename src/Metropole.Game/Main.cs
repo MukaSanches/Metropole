@@ -11,6 +11,7 @@ public partial class Main : Control
     private SimulationEngine? _sim;
     private CityView? _cityView;
     private PremiumCityView? _premiumCityView;
+    private GameAudio? _audio;
     private Label? _graphicsBadge;
     private VBoxContainer? _sidebar;
     private Label? _dateLabel;
@@ -42,6 +43,9 @@ public partial class Main : Control
     {
         SetProcess(true);
         GetWindow().MinSize = new Vector2I(1280, 720);
+
+        _audio = new GameAudio();
+        AddChild(_audio);
 
         var validationRequested =
             OS.GetCmdlineUserArgs().Contains("--validation-run") ||
@@ -102,7 +106,18 @@ public partial class Main : Control
                 RefreshAll();
             }
 
-            GD.Print($"METROPOLE_UI_VALIDATION_OK day={_sim.State.CurrentDay} hour={_sim.State.CurrentHour} companies={_sim.State.OpenCompanies} population={_sim.State.Population}");
+            if (_audio is null || _audio.LoadedAssetCount < 8)
+                throw new InvalidOperationException($"Audio CC0 incompleto: {_audio?.LoadedAssetCount ?? 0}/8 assets carregados.");
+
+            if (GraphicsQuality.UsePremium3D)
+            {
+                if (_premiumCityView is null || _premiumCityView.DetailedAssetCount < 20)
+                    throw new InvalidOperationException($"Camada CC0 3D não carregou assets suficientes: {_premiumCityView?.DetailedAssetCount ?? 0}.");
+                if (_premiumCityView.AnimatedProxyCount < 1)
+                    throw new InvalidOperationException("Nenhum personagem CC0 com AnimationPlayer foi validado.");
+            }
+
+            GD.Print($"METROPOLE_UI_VALIDATION_OK day={_sim.State.CurrentDay} hour={_sim.State.CurrentHour} companies={_sim.State.OpenCompanies} population={_sim.State.Population} audio={_audio.LoadedAssetCount} detailed={_premiumCityView?.DetailedAssetCount ?? 0} animated={_premiumCityView?.AnimatedProxyCount ?? 0}");
             GetTree().Quit(0);
         }
         catch (Exception ex)
@@ -260,7 +275,7 @@ public partial class Main : Control
             $"{metrics.ProfessionArchetypes:N0} profissões • {metrics.BusinessArchetypes:N0} negócios\n" +
             $"{metrics.Products:N0} produtos • {metrics.Events:N0} eventos combináveis",
             12, _muted));
-        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.3.0", 11, _muted2, false));
+        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.4.0 • CC0 ASSET & AUDIO EDITION", 11, _muted2, false));
     }
 
     private void BuildGameScreen()
@@ -548,6 +563,7 @@ public partial class Main : Control
         _mapSubtitle!.Text = $"{s.Population:N0} hab. • {s.OpenCompanies:N0} empresas • {s.Weather} {s.TemperatureC:0}°C • confiança {s.CityConfidence:P0}";
         _cityView?.QueueRedraw();
         _premiumCityView?.RefreshFromSimulation();
+        _audio?.UpdateAmbience(s);
         if (_graphicsBadge is not null)
         {
             _graphicsBadge.Text = _premiumCityView is not null
@@ -1086,6 +1102,8 @@ public partial class Main : Control
             button.IconAlignment = HorizontalAlignment.Left;
         }
         ApplyButtonStyle(button, primary, false);
+        button.MouseEntered += () => _audio?.PlayHover();
+        button.Pressed += () => _audio?.PlayClick();
         return button;
     }
 
@@ -1220,6 +1238,7 @@ public partial class Main : Control
     {
         foreach (Node child in parent.GetChildren())
         {
+            if (child.Name == "GameAudio") continue;
             parent.RemoveChild(child);
             child.QueueFree();
         }
