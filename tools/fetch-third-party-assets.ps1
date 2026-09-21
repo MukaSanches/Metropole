@@ -153,7 +153,7 @@ $modelCount = (Get-ChildItem $kenneyRoot -Recurse -File | Where-Object { $_.Exte
 $audioCount = (Get-ChildItem $audioRoot -Recurse -File | Where-Object { $_.Extension -in @(".ogg",".wav",".mp3") }).Count
 $characterCount = (Get-ChildItem (Join-Path $kenneyRoot "characters") -Recurse -File | Where-Object { $_.Extension -in @(".glb",".gltf",".fbx") }).Count
 
-Write-Host "METROPOLE_ASSET_FETCH_OK models=$modelCount characters=$characterCount audio=$audioCount"
+Write-Output "METROPOLE_ASSET_FETCH_OK models=$modelCount characters=$characterCount audio=$audioCount"
 
 if ($modelCount -lt 80) { throw "Expected at least 80 3D models, got $modelCount" }
 if ($characterCount -lt 4) { throw "Expected at least 4 character models, got $characterCount" }
