@@ -21,6 +21,7 @@ public partial class PremiumCityView : Control
 
     private VisualQuality _quality;
     private VisualQuality _ceiling;
+    private VisualQuality? _manualQuality;
     private double _anim;
     private double _visualAccumulator;
     private double _performanceWindow;
@@ -36,7 +37,29 @@ public partial class PremiumCityView : Control
     private int _lastOpenCompanies = -1;
 
     public string Diagnostics =>
-        $"{GraphicsQuality.RenderingMethod}/{GraphicsQuality.RenderingDriver} • {_quality.ToString().ToUpperInvariant()} • 3D";
+        $"{GraphicsQuality.RenderingMethod}/{GraphicsQuality.RenderingDriver} • {QualityModeLabel} • 3D";
+
+    public string QualityModeLabel =>
+        _manualQuality is VisualQuality fixedQuality
+            ? fixedQuality.ToString().ToUpperInvariant()
+            : $"AUTO/{_quality.ToString().ToUpperInvariant()}";
+
+    public void CycleQualityMode()
+    {
+        _manualQuality = _manualQuality switch
+        {
+            null => VisualQuality.Ultra,
+            VisualQuality.Ultra => VisualQuality.High,
+            VisualQuality.High => VisualQuality.Medium,
+            VisualQuality.Medium => VisualQuality.Low,
+            _ => null
+        };
+
+        _quality = _manualQuality ?? _ceiling;
+        _upgradeWindow = 0;
+        ApplyQualityFeatures();
+        RebuildWorld();
+    }
 
     public void SetEngine(SimulationEngine engine)
     {
@@ -310,7 +333,7 @@ public partial class PremiumCityView : Control
             .OrderBy(c => c.Id)
             .ToArray();
 
-        var count = GraphicsQuality.BuildingsPerDistrict(_ceiling);
+        var count = GraphicsQuality.BuildingsPerDistrict(VisualQuality.Ultra);
         var box = new BoxMesh { Size = Vector3.One };
         box.Material = CreateVertexColorMaterial(0.68f, 0.08f);
 
@@ -373,7 +396,7 @@ public partial class PremiumCityView : Control
     {
         if (_worldRoot is null) return;
 
-        var count = GraphicsQuality.TreesPerDistrict(_ceiling);
+        var count = GraphicsQuality.TreesPerDistrict(VisualQuality.Ultra);
 
         var crownMesh = new SphereMesh
         {
@@ -434,7 +457,7 @@ public partial class PremiumCityView : Control
     {
         if (_worldRoot is null) return;
 
-        var count = GraphicsQuality.VehicleCount(_ceiling);
+        var count = GraphicsQuality.VehicleCount(VisualQuality.Ultra);
         var mesh = new BoxMesh { Size = Vector3.One };
         mesh.Material = CreateVertexColorMaterial(0.40f, 0.22f);
 
@@ -462,7 +485,7 @@ public partial class PremiumCityView : Control
     {
         if (_worldRoot is null) return;
 
-        var count = GraphicsQuality.PedestrianCount(_ceiling);
+        var count = GraphicsQuality.PedestrianCount(VisualQuality.Ultra);
         var mesh = new BoxMesh { Size = Vector3.One };
         mesh.Material = CreateVertexColorMaterial(0.82f, 0.0f);
 
@@ -592,7 +615,7 @@ public partial class PremiumCityView : Control
 
     private void TrackAdaptiveQuality(double delta)
     {
-        if (Engine.IsEditorHint()) return;
+        if (Engine.IsEditorHint() || _manualQuality is not null) return;
 
         _performanceWindow += delta;
         _upgradeWindow += delta;
