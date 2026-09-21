@@ -574,6 +574,17 @@ public static class SimulationValidator
                 throw new InvalidDataException("Relacionamento do jogador aponta para parceiro inválido.");
             if (state.Player.RelationshipStatus is not ("Namorando" or "Casado"))
                 throw new InvalidDataException("Estado romântico do jogador inconsistente.");
+            if (!string.Equals(state.Player.PartnerName, partner.Name, StringComparison.Ordinal))
+                throw new InvalidDataException("Nome do parceiro do jogador está inconsistente.");
+            if (state.Player.RelationshipStatus == "Casado" && partner.PlayerRelationshipStatus != "Cônjuge")
+                throw new InvalidDataException("Casamento do jogador não está refletido no cidadão parceiro.");
+        }
+        else
+        {
+            if (state.Player.RelationshipStatus is "Namorando" or "Casado")
+                throw new InvalidDataException("Estado romântico exige PartnerCitizenId.");
+            if (state.Citizens.Any(c => c.Alive && c.IsPlayerPartner))
+                throw new InvalidDataException("Existe cidadão marcado como parceiro sem vínculo no jogador.");
         }
 
         var openCompanyIds = state.Companies.Where(c => c.Open).Select(c => c.Id).ToHashSet();
