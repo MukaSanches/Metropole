@@ -239,7 +239,7 @@ public sealed class SimulationEngine
             if (budget <= 0m) continue;
 
             var units = Math.Min(market.Stock, budget / Math.Max(1m, market.Price));
-            var spend = decimal.Round(units * market.Price, 2);
+            var spend = Math.Min(citizen.Cash, decimal.Round(units * market.Price, 2));
             if (spend <= 0m) continue;
 
             var sellers = State.Companies.Where(c => c.Open && c.ProductFamily == market.Family).ToArray();
