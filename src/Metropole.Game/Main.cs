@@ -6,7 +6,7 @@ namespace Metropole.Game;
 
 public partial class Main : Control
 {
-    private enum SidebarMode { Visao, Vida, Pessoas, Cidade, Carreira, Mercado, Empresas, Historico, Ajuda }
+    private enum SidebarMode { Visao, Vida, Pessoas, Cidade, Carreira, Mercado, Empresas, Graficos, Historico, Ajuda }
 
     private SimulationEngine? _sim;
     private CityView? _cityView;
@@ -16,6 +16,8 @@ public partial class Main : Control
     private Label? _jobLabel;
     private Label? _statusLabel;
     private Label? _mapSubtitle;
+    private Label? _graphicsLabel;
+    private double _uiPulseAccumulator;
     private readonly Dictionary<SidebarMode, Button> _nav = new();
     private SidebarMode _mode = SidebarMode.Visao;
     private double _speed;
@@ -113,6 +115,14 @@ public partial class Main : Control
 
     public override void _Process(double delta)
     {
+        _uiPulseAccumulator += delta;
+        if (_uiPulseAccumulator >= 0.5)
+        {
+            _uiPulseAccumulator = 0;
+            if (_graphicsLabel is not null && _cityView is not null)
+                _graphicsLabel.Text = _cityView.GraphicsStatusText;
+        }
+
         if (_sim is null || _speed <= 0) return;
         _tickAccumulator += delta * _speed;
         while (_tickAccumulator >= 1.0)
@@ -258,7 +268,7 @@ public partial class Main : Control
             $"{metrics.ProfessionArchetypes:N0} profissões • {metrics.BusinessArchetypes:N0} negócios\n" +
             $"{metrics.Products:N0} produtos • {metrics.Events:N0} eventos combináveis",
             12, _muted));
-        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.2.0", 11, _muted2, false));
+        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.3.0", 11, _muted2, false));
     }
 
     private void BuildGameScreen()
@@ -357,6 +367,7 @@ public partial class Main : Control
         AddNav(box, "Carreira", SidebarMode.Carreira, "career");
         AddNav(box, "Mercado", SidebarMode.Mercado, "market");
         AddNav(box, "Empresas", SidebarMode.Empresas, "business");
+        AddNav(box, "Gráficos", SidebarMode.Graficos, "graphics");
         AddNav(box, "Histórico", SidebarMode.Historico, "history");
         AddNav(box, "Como jogar", SidebarMode.Ajuda, "help");
 
@@ -411,6 +422,7 @@ public partial class Main : Control
             CustomMinimumSize = new Vector2(620, 480)
         };
         _cityView.SetEngine(_sim!);
+        _cityView.SetGraphicsProfile(GraphicsProfile.Auto);
         frame.AddChild(_cityView);
 
         var footer = new HBoxContainer();
@@ -419,7 +431,9 @@ public partial class Main : Control
         footer.AddChild(MakeLegend(_gold, "Sua empresa"));
         footer.AddChild(MakeLegend(_muted, "Economia local"));
         footer.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
-        footer.AddChild(MakeLabel("dia/noite • clima • pedestres • tráfego vivo", 10, _muted2, false));
+        _graphicsLabel = MakeLabel(_cityView.GraphicsStatusText, 10, _muted2, false);
+        footer.AddChild(_graphicsLabel);
+        footer.AddChild(MakeLabel(" • renderer adaptativo", 10, _muted2, false));
         box.AddChild(footer);
         return panel;
     }
@@ -521,6 +535,7 @@ public partial class Main : Control
             case SidebarMode.Carreira: BuildCareer(); break;
             case SidebarMode.Mercado: BuildMarket(); break;
             case SidebarMode.Empresas: BuildBusinessDeep(); break;
+            case SidebarMode.Graficos: BuildGraphics(); break;
             case SidebarMode.Historico: BuildHistory(); break;
             case SidebarMode.Ajuda: BuildHelp(); break;
         }
@@ -837,6 +852,80 @@ public partial class Main : Control
         foreach (var company in s.Companies.Where(c => c.Open).OrderByDescending(c => c.Cash).Take(7))
             _sidebar.AddChild(MakeInfoCard(company.Sector.ToUpperInvariant(), company.Name,
                 $"Caixa Cr$ {company.Cash:N0} • {company.EmployeeIds.Count} funcionários", company.PlayerOwned ? _gold : _muted));
+    }
+
+    private void BuildGraphics()
+    {
+        if (_sidebar is null || _cityView is null) return;
+
+        AddSidebarTitle("GRÁFICOS", "Qualidade automática para manter fluidez sem sacrificar a cidade.", "graphics");
+
+        _sidebar.AddChild(MakeInfoCard(
+            "PERFIL ATUAL",
+            AdaptiveGraphicsController.ProfileName(_cityView.RequestedGraphicsProfile),
+            _cityView.GraphicsStatusText,
+            _accent));
+
+        _sidebar.AddChild(MakeSection("QUALIDADE"));
+
+        foreach (var profile in new[]
+                 {
+                     GraphicsProfile.Auto,
+                     GraphicsProfile.Ultra,
+                     GraphicsProfile.High,
+                     GraphicsProfile.Balanced,
+                     GraphicsProfile.Low
+                 })
+        {
+            var budget = AdaptiveGraphicsController.BudgetFor(profile == GraphicsProfile.Auto
+                ? _cityView.EffectiveGraphicsProfile
+                : profile);
+
+            var title = profile == GraphicsProfile.Auto
+                ? "AUTOMÁTICO (RECOMENDADO)"
+                : AdaptiveGraphicsController.ProfileName(profile).ToUpperInvariant();
+
+            var button = MakeButton(title, _cityView.RequestedGraphicsProfile == profile, "graphics");
+            button.Pressed += () =>
+            {
+                _cityView.SetGraphicsProfile(profile);
+                SetStatus(profile == GraphicsProfile.Auto
+                    ? "Qualidade automática ativada: o jogo ajustará detalhes conforme o FPS."
+                    : $"Perfil {AdaptiveGraphicsController.ProfileName(profile)} aplicado.");
+                RefreshSidebar();
+            };
+            _sidebar.AddChild(button);
+
+            _sidebar.AddChild(MakeLabel(
+                $"{budget.RedrawHz} Hz visual • até {budget.MaxPedestriansPerDistrict} pedestres/bairro • " +
+                $"{budget.RainParticles} partículas de chuva • {budget.MaxCompaniesPerDistrict} empresas visuais/bairro",
+                9, _muted2));
+        }
+
+        _sidebar.AddChild(MakeSection("COMO O AUTOMÁTICO FUNCIONA"));
+        _sidebar.AddChild(MakeInfoCard(
+            "PROTEÇÃO DE FPS",
+            "Reduz detalhes antes de reduzir jogabilidade",
+            "Se o FPS ficar abaixo de ~47 por vários segundos, o renderer reduz densidade visual, chuva, tráfego e frequência de redraw. Se houver folga sustentada acima de ~58 FPS, a qualidade sobe novamente.",
+            _success));
+
+        _sidebar.AddChild(MakeInfoCard(
+            "SIMULAÇÃO INDEPENDENTE",
+            "A economia não depende do FPS",
+            "Mesmo no perfil Leve, cidadãos, empresas, mercados, relacionamentos e finanças continuam sendo simulados pelas mesmas regras. Só a representação visual muda.",
+            _gold));
+
+        _sidebar.AddChild(MakeSection("RECURSOS ESCALÁVEIS"));
+        foreach (var item in new[]
+                 {
+                     "densidade de pedestres e tráfego",
+                     "partículas de chuva e atmosfera",
+                     "quantidade de árvores e detalhes",
+                     "janelas iluminadas e sinais noturnos",
+                     "frequência de redraw da cidade",
+                     "efeitos de pulso econômico e iluminação ambiente"
+                 })
+            _sidebar.AddChild(MakeLabel($"• {item}", 10, _muted));
     }
 
     private void BuildHistory()
