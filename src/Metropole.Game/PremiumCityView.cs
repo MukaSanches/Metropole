@@ -349,7 +349,12 @@ public partial class PremiumCityView : Control
         var isAsphalt = size.Y >= 0.18f && (size.X > 5f || size.Z > 5f);
         box.Material = isAsphalt
             ? _asphaltMaterial ?? CreateVertexColorMaterial(0.86f, 0.0f)
-            : _pavementMaterial ?? CreateBoxMesh(Vector3.One, color, 0.86f).Material;
+            : _pavementMaterial ?? new StandardMaterial3D
+            {
+                AlbedoColor = color,
+                Roughness = 0.86f,
+                Metallic = 0.0f
+            };
 
         var mesh = new MeshInstance3D
         {
