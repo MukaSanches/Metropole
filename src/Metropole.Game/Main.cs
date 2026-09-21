@@ -65,7 +65,8 @@ public partial class Main : Control
         margin.AddThemeConstantOverride("margin_bottom", 36);
         panel.AddChild(margin);
 
-        var box = new VBoxContainer();\n        box.AddThemeConstantOverride("separation", 14);
+        var box = new VBoxContainer();
+        box.AddThemeConstantOverride("separation", 14);
         margin.AddChild(box);
 
         var title = MakeLabel("METRÓPOLE ∞", 42, _accent);
