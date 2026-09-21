@@ -2,6 +2,65 @@ namespace Metropole.Sim;
 
 public static class SocialActions
 {
+    public static void UpdateDailyPlayerRelationships(GameState state)
+    {
+        var player = state.Player;
+
+        if (player.PartnerCitizenId is int partnerId)
+        {
+            var partner = state.Citizens.FirstOrDefault(c => c.Id == partnerId && c.Alive && c.IsPlayerPartner);
+            if (partner is null)
+            {
+                var oldName = player.PartnerName ?? "parceiro";
+                player.PartnerCitizenId = null;
+                player.PartnerName = oldName;
+                player.RelationshipStatus = "Viúvo";
+                player.RelationshipStartDay = -1;
+                player.MarriageDay = -1;
+                player.Happiness = Math.Clamp(player.Happiness - 16m, 0m, 100m);
+                player.Stress = Math.Clamp(player.Stress + 18m, 0m, 100m);
+
+                AddHistory(state, "Relacionamento", $"{player.Name} perdeu {oldName}.",
+                    "falecimento do parceiro → viuvez e impacto emocional");
+            }
+            else
+            {
+                var daysWithoutInteraction = Math.Max(0, state.CurrentDay - partner.LastPlayerInteractionDay);
+
+                if (daysWithoutInteraction >= 4)
+                {
+                    var neglect = Math.Min(1.4m, 0.10m + (daysWithoutInteraction - 3) * 0.035m);
+                    partner.PlayerAffinity = Math.Clamp(partner.PlayerAffinity - neglect, 0m, 100m);
+                    partner.PlayerTrust = Math.Clamp(partner.PlayerTrust - neglect * 0.42m, 0m, 100m);
+                    player.Social = Math.Clamp(player.Social - 0.18m, 0m, 100m);
+                }
+                else if (partner.DistrictId == player.DistrictId)
+                {
+                    player.Social = Math.Clamp(player.Social + 0.08m, 0m, 100m);
+                    player.Happiness = Math.Clamp(player.Happiness + 0.04m, 0m, 100m);
+                }
+            }
+        }
+
+        foreach (var citizen in state.Citizens.Where(c =>
+                     c.Alive &&
+                     !c.IsPlayerPartner &&
+                     c.PlayerFamiliarity > 0m))
+        {
+            var gap = Math.Max(0, state.CurrentDay - citizen.LastPlayerInteractionDay);
+            if (gap < 14) continue;
+
+            var familiarityDecay = Math.Min(0.16m, 0.02m + (gap - 14) * 0.002m);
+            var affinityDecay = Math.Min(0.12m, 0.015m + (gap - 14) * 0.0015m);
+
+            citizen.PlayerFamiliarity = Math.Clamp(citizen.PlayerFamiliarity - familiarityDecay, 0m, 100m);
+            citizen.PlayerAffinity = Math.Clamp(citizen.PlayerAffinity - affinityDecay, 0m, 100m);
+
+            if (citizen.PlayerFamiliarity < 8m)
+                citizen.PlayerRelationshipStatus = "Conhecido distante";
+        }
+    }
+
     public static IReadOnlyList<CitizenState> GetNearbyPeople(this SimulationEngine engine, int limit = 24)
     {
         var state = engine.State;
@@ -200,6 +259,7 @@ public static class SocialActions
 
         p.RelationshipStatus = "Casado";
         p.MarriageDay = state.CurrentDay;
+        citizen.DistrictId = p.DistrictId;
         citizen.PlayerRelationshipStatus = "Cônjuge";
         citizen.PlayerAffinity = Math.Clamp(citizen.PlayerAffinity + 10m, 0m, 100m);
         citizen.PlayerTrust = Math.Clamp(citizen.PlayerTrust + 12m, 0m, 100m);
