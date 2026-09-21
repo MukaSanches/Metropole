@@ -41,8 +41,13 @@ public partial class Main : Control
         SetProcess(true);
         GetWindow().MinSize = new Vector2I(1280, 720);
 
-        if (OS.GetCmdlineUserArgs().Contains("--validation-run"))
+        var validationRequested =
+            OS.GetCmdlineUserArgs().Contains("--validation-run") ||
+            string.Equals(Environment.GetEnvironmentVariable("METROPOLE_UI_VALIDATION"), "1", StringComparison.Ordinal);
+
+        if (validationRequested)
         {
+            GD.Print("METROPOLE_UI_VALIDATION_START");
             CallDeferred(MethodName.RunUiValidation);
             return;
         }
