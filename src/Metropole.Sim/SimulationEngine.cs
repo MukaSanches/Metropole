@@ -135,6 +135,8 @@ public sealed partial class SimulationEngine
                 citizen.Hunger = Clamp(citizen.Hunger + 4m, 0m, 100m);
         }
 
+        ProcessInstitutionalDemand(rng);
+
         if (State.CurrentDay % 7 == 0)
         {
             var district = State.Districts.First(d => d.Id == State.Player.DistrictId);
