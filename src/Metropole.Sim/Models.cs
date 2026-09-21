@@ -59,6 +59,7 @@ public sealed class PlayerState
     public decimal EducationProgress { get; set; }
     public int EducationLevel { get; set; } = 2;
     public int CareerExperienceDays { get; set; }
+    public decimal WorkedHoursToday { get; set; }
     public string CurrentActivity { get; set; } = "Em casa";
     public string RelationshipStatus { get; set; } = "Solteiro";
     public string? PartnerName { get; set; }
