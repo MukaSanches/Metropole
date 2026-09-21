@@ -1,5 +1,42 @@
 # Changelog
 
+## 1.4.0 - 2026-09-21
+
+### Assets
+- camada curada de modelos CC0 da Kenney;
+- edifícios comerciais e industriais detalhados;
+- carros, táxi, entrega, van e veículos de serviço;
+- personagens Mini Characters;
+- aquisição pinada por commit e manifest SHA-256;
+- assets detalhados desligados no perfil Low.
+
+### Animação
+- personagens detalhados usam AnimationPlayer importado dos GLB;
+- seleção automática de clip de caminhada com fallback para idle;
+- veículos detalhados animados sobre a malha viária;
+- camada detalhada continua separada da simulação lógica.
+
+### Áudio
+- sons CC0 de UI da Kenney;
+- ambiência urbana CC0;
+- chuva CC0 sincronizada com o clima;
+- volume ambiente ajustado por horário e intensidade da chuva.
+
+### Performance
+- renderer procedural/MultiMesh da 1.3 continua responsável pela densidade em massa;
+- modelos detalhados funcionam como proxies próximos;
+- Medium/High/Ultra controlam a quantidade da camada detalhada;
+- Low mantém a cidade leve sem depender dos GLB detalhados.
+
+### QA
+- CI baixa apenas assets aprovados e pinados;
+- valida presença e tamanho mínimo;
+- Godot importa GLB/WAV/OGG antes da exportação;
+- valida quantidade de assets detalhados;
+- valida AnimationPlayer real em personagem;
+- valida carregamento de oito streams obrigatórios de áudio;
+- mantém testes premium, fallback, installer e execução pós-instalação.
+
 ## 1.3.0 - 2026-09-21
 
 ### Renderer
