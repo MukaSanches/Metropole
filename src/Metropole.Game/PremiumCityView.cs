@@ -16,6 +16,9 @@ public partial class PremiumCityView : Control
     private CityWeatherOverlay? _weatherOverlay;
 
     private readonly List<(MultiMeshInstance3D Node, int FullCount)> _scalableGroups = [];
+    private readonly List<Node3D> _assetBuildings = [];
+    private readonly List<Node3D> _assetProps = [];
+    private readonly List<(Node3D Node, AnimationPlayer? Player, int Index)> _animatedCitizens = [];
     private MultiMeshInstance3D? _vehicles;
     private MultiMeshInstance3D? _pedestrians;
 
@@ -110,6 +113,7 @@ public partial class PremiumCityView : Control
             UpdateAtmosphere();
             UpdateVehicles();
             UpdatePedestrians();
+            UpdateAnimatedCitizens();
             _weatherOverlay?.SetAnimationTime(_anim);
         }
     }
@@ -229,14 +233,20 @@ public partial class PremiumCityView : Control
         }
 
         _scalableGroups.Clear();
+        _assetBuildings.Clear();
+        _assetProps.Clear();
+        _animatedCitizens.Clear();
         _vehicles = null;
         _pedestrians = null;
 
         BuildGround();
         BuildRoadNetwork();
         BuildDistricts();
+        BuildAssetLandmarks();
+        BuildAssetProps();
         BuildVehicles();
         BuildPedestrians();
+        BuildAnimatedCitizens();
         _lastBuiltDay = _engine.State.CurrentDay;
         _lastOpenCompanies = _engine.State.OpenCompanies;
         UpdateAtmosphere();
@@ -453,6 +463,108 @@ public partial class PremiumCityView : Control
         _scalableGroups.Add((trunkNode, count));
     }
 
+    private void BuildAssetLandmarks()
+    {
+        if (_engine is null || _worldRoot is null) return;
+
+        foreach (var district in _engine.State.Districts)
+        {
+            var center = DistrictPosition(district);
+            var companies = _engine.State.Companies
+                .Where(c => c.Open && c.DistrictId == district.Id)
+                .OrderByDescending(c => c.PlayerOwned)
+                .ThenByDescending(c => c.Reputation)
+                .ToArray();
+
+            var lead = companies.FirstOrDefault();
+            var variant = lead?.PlayerOwned == true
+                ? 4
+                : district.WealthIndex > 1.22m
+                    ? 3 + district.Id % 2
+                    : district.Id % ExternalAssetLibrary.BuildingScenes.Length;
+
+            var targetFootprint = lead?.PlayerOwned == true ? 5.2f : 4.1f + (float)district.WealthIndex * 0.45f;
+            var targetHeight = lead?.PlayerOwned == true ? 9.5f : 6.2f + (float)district.WealthIndex * 2.0f;
+
+            var node = ExternalAssetLibrary.InstantiateBuilding(
+                variant,
+                _worldRoot,
+                center + new Vector3(0, 0.20f, 0),
+                1f);
+
+            if (node is null) continue;
+            FitImportedScene(node, targetFootprint, targetHeight, 0.20f);
+            node.Visible = _quality >= VisualQuality.High;
+            _assetBuildings.Add(node);
+        }
+    }
+
+    private void BuildAssetProps()
+    {
+        if (_engine is null || _worldRoot is null) return;
+
+        foreach (var district in _engine.State.Districts)
+        {
+            var center = DistrictPosition(district);
+            foreach (var offset in new[]
+                     {
+                         new Vector3(-4.25f, 0.16f, -4.25f),
+                         new Vector3(4.25f, 0.16f, 4.25f)
+                     })
+            {
+                var light = ExternalAssetLibrary.InstantiateProp(
+                    0,
+                    _worldRoot,
+                    center + offset,
+                    1f);
+
+                if (light is null) continue;
+                FitImportedScene(light, 0.75f, 2.8f, 0.16f);
+                light.Visible = _quality >= VisualQuality.High;
+                _assetProps.Add(light);
+            }
+
+            var crisis = _engine.State.Companies.Any(c =>
+                c.Open && c.DistrictId == district.Id && c.OperatingStatus == "Crise");
+            if (!crisis) continue;
+
+            var cone = ExternalAssetLibrary.InstantiateProp(
+                1,
+                _worldRoot,
+                center + new Vector3(2.6f, 0.18f, -2.8f),
+                1f);
+            if (cone is null) continue;
+            FitImportedScene(cone, 0.35f, 0.55f, 0.18f);
+            cone.Visible = _quality >= VisualQuality.High;
+            _assetProps.Add(cone);
+        }
+    }
+
+    private void BuildAnimatedCitizens()
+    {
+        if (_engine is null || _worldRoot is null) return;
+
+        const int count = 12;
+        for (var i = 0; i < count; i++)
+        {
+            var district = _engine.State.Districts[i % _engine.State.Districts.Count];
+            var center = DistrictPosition(district);
+            var node = ExternalAssetLibrary.InstantiateCharacter(
+                i,
+                _worldRoot,
+                center + new Vector3(-4.6f, 0.18f, -4.65f),
+                1f);
+            if (node is null) continue;
+
+            FitImportedScene(node, 0.55f, 1.35f, 0.18f);
+            var player = ExternalAssetLibrary.FindAnimationPlayer(node);
+            node.Visible = _quality >= VisualQuality.High;
+            if (player is not null)
+                player.Active = node.Visible;
+            _animatedCitizens.Add((node, player, i));
+        }
+    }
+
     private void BuildVehicles()
     {
         if (_worldRoot is null) return;
@@ -574,6 +686,57 @@ public partial class PremiumCityView : Control
         }
     }
 
+    private void UpdateAnimatedCitizens()
+    {
+        if (_engine is null || _animatedCitizens.Count == 0) return;
+
+        var state = _engine.State;
+        var activity = state.CurrentHour is >= 7 and <= 21 ? 1f : 0.30f;
+        if (state.Weather.Contains("Chuva", StringComparison.OrdinalIgnoreCase))
+            activity *= 0.65f;
+
+        var maxVisible = _quality switch
+        {
+            VisualQuality.Ultra => 12,
+            VisualQuality.High => 7,
+            _ => 0
+        };
+
+        for (var n = 0; n < _animatedCitizens.Count; n++)
+        {
+            var entry = _animatedCitizens[n];
+            var visible = n < maxVisible && activity > 0.36f;
+            entry.Node.Visible = visible;
+            if (entry.Player is not null)
+                entry.Player.Active = visible;
+            if (!visible) continue;
+
+            var district = state.Districts[entry.Index % state.Districts.Count];
+            var center = DistrictPosition(district);
+            var h = StableHash($"asset-person:{entry.Index}");
+            var alongX = (h & 1) == 0;
+            var edge = ((h >> 2) & 1) == 0 ? 4.45f : -4.45f;
+            var direction = ((h >> 4) & 1) == 0 ? 1f : -1f;
+            var phase = (float)((_anim * (0.020 + (entry.Index % 5) * 0.0015) * direction + Hash01(h >> 8)) % 1.0);
+            if (phase < 0) phase += 1f;
+            var travel = Mathf.Lerp(-4.2f, 4.2f, phase);
+
+            entry.Node.Position = alongX
+                ? center + new Vector3(travel, entry.Node.Position.Y, edge)
+                : center + new Vector3(edge, entry.Node.Position.Y, travel);
+
+            entry.Node.Rotation = new Vector3(
+                entry.Node.Rotation.X,
+                alongX
+                    ? (direction > 0 ? -Mathf.Pi / 2f : Mathf.Pi / 2f)
+                    : (direction > 0 ? 0f : Mathf.Pi),
+                entry.Node.Rotation.Z);
+
+            if (entry.Player is not null && !entry.Player.IsPlaying())
+                ExternalAssetLibrary.PlayPreferredAnimation(entry.Player, "Walk");
+        }
+    }
+
     private void UpdateAtmosphere()
     {
         if (_engine is null || _sun is null || _environment is null) return;
@@ -652,6 +815,26 @@ public partial class PremiumCityView : Control
             node.Multimesh.VisibleInstanceCount = Math.Clamp((int)MathF.Round(fullCount * ratio), 1, fullCount);
         }
 
+        var showExternal = _quality >= VisualQuality.High;
+        foreach (var node in _assetBuildings)
+            node.Visible = showExternal;
+        foreach (var node in _assetProps)
+            node.Visible = showExternal;
+
+        var animatedLimit = _quality switch
+        {
+            VisualQuality.Ultra => 12,
+            VisualQuality.High => 7,
+            _ => 0
+        };
+        for (var i = 0; i < _animatedCitizens.Count; i++)
+        {
+            var visible = i < animatedLimit;
+            _animatedCitizens[i].Node.Visible = visible;
+            if (_animatedCitizens[i].Player is not null)
+                _animatedCitizens[i].Player!.Active = visible;
+        }
+
         if (_sun is not null)
             _sun.ShadowEnabled = _quality >= VisualQuality.Medium;
 
@@ -672,6 +855,59 @@ public partial class PremiumCityView : Control
         var position = _cameraTarget + new Vector3(33f, 39f, 33f);
         _camera.Position = position;
         _camera.LookAt(_cameraTarget, Vector3.Up);
+    }
+
+    private static void FitImportedScene(Node3D root, float targetFootprint, float targetHeight, float groundY)
+    {
+        var bounds = CombinedAabb(root);
+        if (bounds.Size.LengthSquared() <= 0.0001f) return;
+
+        var horizontal = Math.Max(0.001f, Math.Max(bounds.Size.X, bounds.Size.Z));
+        var vertical = Math.Max(0.001f, bounds.Size.Y);
+        var scale = Math.Min(targetFootprint / horizontal, targetHeight / vertical);
+        scale = Math.Clamp(scale, 0.02f, 12f);
+        root.Scale = Vector3.One * scale;
+        root.Position = new Vector3(root.Position.X, groundY - bounds.Position.Y * scale, root.Position.Z);
+    }
+
+    private static Aabb CombinedAabb(Node3D root)
+    {
+        var hasBounds = false;
+        var result = new Aabb();
+
+        foreach (var mesh in Descendants<MeshInstance3D>(root))
+        {
+            if (mesh.Mesh is null) continue;
+            var aabb = mesh.GetAabb();
+            for (var i = 0; i < 8; i++)
+            {
+                var corner = aabb.GetEndpoint(i);
+                var world = mesh.ToGlobal(corner);
+                var local = root.ToLocal(world);
+                if (!hasBounds)
+                {
+                    result = new Aabb(local, Vector3.Zero);
+                    hasBounds = true;
+                }
+                else
+                {
+                    result = result.Expand(local);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private static IEnumerable<T> Descendants<T>(Node parent) where T : Node
+    {
+        foreach (Node child in parent.GetChildren())
+        {
+            if (child is T typed)
+                yield return typed;
+            foreach (var nested in Descendants<T>(child))
+                yield return nested;
+        }
     }
 
     private static Mesh CreateBoxMesh(Vector3 size, Color color, float roughness)
