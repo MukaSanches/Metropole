@@ -43,8 +43,22 @@ public partial class PremiumCityView : Control
     public string Diagnostics =>
         $"{GraphicsQuality.RenderingMethod}/{GraphicsQuality.RenderingDriver} • {QualityModeLabel} • 3D • assets {_externalAssets?.DetailedAssetCount ?? 0}";
 
+    public event Action<int>? PersonSelected;
+
     public int DetailedAssetCount => _externalAssets?.DetailedAssetCount ?? 0;
     public int AnimatedProxyCount => _externalAssets?.AnimatedProxyCount ?? 0;
+    public int InteractivePersonCount => _externalAssets?.InteractivePersonCount ?? 0;
+
+    public bool FocusCitizen(int citizenId)
+    {
+        if (_externalAssets is null || !_externalAssets.TryGetCitizenPosition(citizenId, out var position))
+            return false;
+
+        _cameraTarget = new Vector3(position.X, 0, position.Z);
+        _cameraSize = Math.Clamp(_cameraSize, 24f, 38f);
+        ApplyCamera();
+        return true;
+    }
 
     public string QualityModeLabel =>
         _manualQuality is VisualQuality fixedQuality
@@ -172,6 +186,7 @@ public partial class PremiumCityView : Control
         _viewport = new SubViewport
         {
             OwnWorld3D = true,
+            PhysicsObjectPicking = true,
             RenderTargetUpdateMode = SubViewport.UpdateMode.Always
         };
         _viewportContainer.AddChild(_viewport);
@@ -502,6 +517,11 @@ public partial class PremiumCityView : Control
 
         _externalAssets = new ExternalAssetLayer { Name = "ExternalCC0Assets" };
         _externalAssets.SetEngine(_engine);
+        _externalAssets.PersonSelected += citizenId =>
+        {
+            FocusCitizen(citizenId);
+            PersonSelected?.Invoke(citizenId);
+        };
         _worldRoot.AddChild(_externalAssets);
         _externalAssets.Build(_quality);
     }
