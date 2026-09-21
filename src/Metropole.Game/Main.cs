@@ -115,9 +115,13 @@ public partial class Main : Control
                     throw new InvalidOperationException($"Camada CC0 3D não carregou assets suficientes: {_premiumCityView?.DetailedAssetCount ?? 0}.");
                 if (_premiumCityView.AnimatedProxyCount < 1)
                     throw new InvalidOperationException("Nenhum personagem CC0 com AnimationPlayer foi validado.");
+                if (!_premiumCityView.PolishReady)
+                    throw new InvalidOperationException("Camada de polimento 1.5 não foi inicializada.");
+                if (_premiumCityView.StreetLightCount < 12)
+                    throw new InvalidOperationException($"Iluminação urbana incompleta: {_premiumCityView.StreetLightCount} luminárias.");
             }
 
-            GD.Print($"METROPOLE_UI_VALIDATION_OK day={_sim.State.CurrentDay} hour={_sim.State.CurrentHour} companies={_sim.State.OpenCompanies} population={_sim.State.Population} audio={_audio.LoadedAssetCount} detailed={_premiumCityView?.DetailedAssetCount ?? 0} animated={_premiumCityView?.AnimatedProxyCount ?? 0}");
+            GD.Print($"METROPOLE_UI_VALIDATION_OK day={_sim.State.CurrentDay} hour={_sim.State.CurrentHour} companies={_sim.State.OpenCompanies} population={_sim.State.Population} audio={_audio.LoadedAssetCount} detailed={_premiumCityView?.DetailedAssetCount ?? 0} animated={_premiumCityView?.AnimatedProxyCount ?? 0} polish={_premiumCityView?.PolishReady ?? false} lamps={_premiumCityView?.StreetLightCount ?? 0}");
             GetTree().Quit(0);
         }
         catch (Exception ex)
@@ -275,7 +279,7 @@ public partial class Main : Control
             $"{metrics.ProfessionArchetypes:N0} profissões • {metrics.BusinessArchetypes:N0} negócios\n" +
             $"{metrics.Products:N0} produtos • {metrics.Events:N0} eventos combináveis",
             12, _muted));
-        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.4.0 • CC0 ASSET & AUDIO EDITION", 11, _muted2, false));
+        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.5.0 • PREMIUM POLISH EDITION", 11, _muted2, false));
     }
 
     private void BuildGameScreen()
@@ -471,11 +475,41 @@ public partial class Main : Control
                 }
             };
             footer.AddChild(graphicsMode);
+
+            var focus = MakeButton("FOCAR", false);
+            focus.CustomMinimumSize = new Vector2(68, 34);
+            focus.TooltipText = "Foca no seu bairro ou na sua empresa.";
+            focus.Pressed += () =>
+            {
+                _premiumCityView?.FocusOnPlayer();
+                SetStatus("Câmera focada na sua atividade principal.");
+            };
+            footer.AddChild(focus);
+
+            var rotate = MakeButton("GIRAR", false);
+            rotate.CustomMinimumSize = new Vector2(68, 34);
+            rotate.TooltipText = "Gira a câmera isométrica em 90°.";
+            rotate.Pressed += () =>
+            {
+                _premiumCityView?.RotateCameraClockwise();
+                SetStatus("Câmera girada 90°.");
+            };
+            footer.AddChild(rotate);
+
+            var resetView = MakeButton("RESET", false);
+            resetView.CustomMinimumSize = new Vector2(68, 34);
+            resetView.TooltipText = "Restaura a visão geral da cidade.";
+            resetView.Pressed += () =>
+            {
+                _premiumCityView?.ResetCamera();
+                SetStatus("Visão geral restaurada.");
+            };
+            footer.AddChild(resetView);
         }
 
         footer.AddChild(MakeLabel(
             GraphicsQuality.UsePremium3D
-                ? "2.5D • MultiMesh • AUTO adaptativo • zoom/pan"
+                ? "PBR • câmera suave • iluminação local • LOD/AA adaptativo"
                 : "fallback leve • dia/noite • clima • tráfego",
             10, _muted2, false));
         box.AddChild(footer);
