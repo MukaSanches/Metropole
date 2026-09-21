@@ -206,7 +206,7 @@ public partial class PremiumCityView : Control
             OwnWorld3D = true,
             RenderTargetUpdateMode = SubViewport.UpdateMode.Always,
             Msaa3D = (Viewport.Msaa)1,
-            ScreenSpaceAA = (Viewport.ScreenSpaceAA)2,
+            ScreenSpaceAA = (Viewport.ScreenSpaceAAEnum)2,
             UseTaa = true,
             MeshLodThreshold = 1.0f
         };
@@ -801,9 +801,9 @@ public partial class PremiumCityView : Control
             };
             _viewport.ScreenSpaceAA = _quality switch
             {
-                VisualQuality.Low => (Viewport.ScreenSpaceAA)1,
-                VisualQuality.Medium => (Viewport.ScreenSpaceAA)2,
-                _ => (Viewport.ScreenSpaceAA)0
+                VisualQuality.Low => (Viewport.ScreenSpaceAAEnum)1,
+                VisualQuality.Medium => (Viewport.ScreenSpaceAAEnum)2,
+                _ => (Viewport.ScreenSpaceAAEnum)0
             };
             _viewport.UseTaa = _quality >= VisualQuality.High;
         }
