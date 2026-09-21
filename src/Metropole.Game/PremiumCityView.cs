@@ -49,7 +49,7 @@ public partial class PremiumCityView : Control
     public int DetailedAssetCount => _externalAssets?.DetailedAssetCount ?? 0;
     public int AnimatedProxyCount => _externalAssets?.AnimatedProxyCount ?? 0;
     public int StreetLightCount => _polishLayer?.StreetLightCount ?? 0;
-    public bool PolishReady => _roadMaterial is not null && _polishLayer?.Ready == true;
+    public bool PolishReady => _roadMaterial is not null && _polishLayer?.IsPolishReady == true;
 
     public string QualityModeLabel =>
         _manualQuality is VisualQuality fixedQuality
