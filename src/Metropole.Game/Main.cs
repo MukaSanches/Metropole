@@ -551,7 +551,7 @@ public partial class Main : Control
             {
                 SizeFlagsHorizontal = SizeFlags.ExpandFill,
                 SizeFlagsVertical = SizeFlags.ExpandFill,
-                CustomMinimumSize = new Vector2(620, 480)
+                CustomMinimumSize = new Vector2(400, 360)
             };
             _cityView.SetEngine(_sim!);
             frame.AddChild(_cityView);
