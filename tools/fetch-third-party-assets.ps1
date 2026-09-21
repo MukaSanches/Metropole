@@ -50,7 +50,7 @@ function Copy-AllModels([string]$PackDir, [string]$Destination) {
     Get-ChildItem $PackDir -Recurse -File | Where-Object {
         $_.Extension -in @(".png", ".jpg", ".jpeg", ".webp")
     } | ForEach-Object {
-        $texDir = Join-Path $Destination "textures"
+        $texDir = Join-Path $Destination "Textures"
         New-Item -ItemType Directory -Force -Path $texDir | Out-Null
         Copy-Item $_.FullName (Join-Path $texDir $_.Name) -Force
     }
@@ -148,6 +148,14 @@ Attribution is not required by CC0, but source/author information is retained he
 "@
 
 Set-Content -Path (Join-Path $assetRoot "THIRD_PARTY_ASSETS.txt") -Value $license -Encoding UTF8
+
+$manifestFiles = Get-ChildItem $assetRoot -Recurse -File | Where-Object {
+    $_.Extension -in @(".glb", ".gltf", ".fbx", ".ogg", ".wav", ".mp3")
+} | ForEach-Object {
+    $relative = $_.FullName.Substring($ProjectRoot.Length).TrimStart('\','/').Replace('\','/')
+    "res://$relative"
+} | Sort-Object -Unique
+Set-Content -Path (Join-Path $assetRoot "asset_manifest.txt") -Value $manifestFiles -Encoding UTF8
 
 $modelCount = (Get-ChildItem $kenneyRoot -Recurse -File | Where-Object { $_.Extension -in @(".glb",".gltf",".fbx") }).Count
 $audioCount = (Get-ChildItem $audioRoot -Recurse -File | Where-Object { $_.Extension -in @(".ogg",".wav",".mp3") }).Count
