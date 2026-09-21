@@ -28,3 +28,31 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 See https://godotengine.org/license/
+
+
+## Kenney CC0 assets
+
+METRÓPOLE ∞ 1.4 uses selected assets from Kenney packs:
+- City Kit (Commercial)
+- City Kit (Industrial)
+- City Kit (Roads)
+- Car Kit
+- Mini Characters
+- Interface Sounds
+
+These assets are released under Creative Commons CC0 1.0 Universal.
+Canonical source: https://kenney.nl/assets
+
+No attribution is required by CC0. Source records are retained in `docs/EXTERNAL_ASSETS_V1.4.md` for auditability.
+
+## OpenGameArt CC0 ambience
+
+METRÓPOLE ∞ 1.4 uses:
+- "AMB Outside 1" by Kresiek The Furry — CC0
+- "AMB Rain Loop 1" by Kresiek The Furry — CC0
+
+Canonical source:
+- https://opengameart.org/content/amb-outside-1
+- https://opengameart.org/content/amb-rain-loop-1
+
+These works are distributed under CC0.
