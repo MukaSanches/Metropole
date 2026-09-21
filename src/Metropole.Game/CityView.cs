@@ -8,6 +8,8 @@ public partial class CityView : Control
     private SimulationEngine? _engine;
     private double _anim;
     private double _redrawAccumulator;
+    private readonly AdaptiveGraphicsController _graphics = new();
+    private GraphicsBudget _budget = AdaptiveGraphicsController.BudgetFor(GraphicsProfile.Balanced);
 
     private readonly Color _nightSky = new(0.010f, 0.020f, 0.045f);
     private readonly Color _daySky = new(0.055f, 0.135f, 0.185f);
@@ -29,15 +31,34 @@ public partial class CityView : Control
         QueueRedraw();
     }
 
+    public void SetGraphicsProfile(GraphicsProfile profile)
+    {
+        _graphics.SetProfile(profile);
+        _budget = _graphics.Budget;
+        QueueRedraw();
+    }
+
+    public GraphicsProfile RequestedGraphicsProfile => _graphics.Requested;
+    public GraphicsProfile EffectiveGraphicsProfile => _graphics.Effective;
+    public string GraphicsStatusText => _graphics.StatusText();
+
     public override void _Process(double delta)
     {
         _anim += delta;
         _redrawAccumulator += delta;
         if (_anim > 10000) _anim = 0;
 
-        if (_redrawAccumulator >= 1.0 / 30.0)
+        if (_graphics.Update(delta))
+        {
+            _budget = _graphics.Budget;
+            QueueRedraw();
+        }
+
+        var hz = Math.Max(10, _graphics.Budget.RedrawHz);
+        if (_redrawAccumulator >= 1.0 / hz)
         {
             _redrawAccumulator = 0;
+            _budget = _graphics.Budget;
             QueueRedraw();
         }
     }
@@ -78,6 +99,7 @@ public partial class CityView : Control
         DrawTraffic(state, center, tileW, tileH, daylight);
         DrawPedestrians(state, center, tileW, tileH, daylight);
         DrawWeatherOverlay(size, state, daylight);
+        DrawEconomicPulse(state, center, tileW, tileH, daylight);
         DrawVignette(size);
     }
 
@@ -99,18 +121,21 @@ public partial class CityView : Control
 
         DrawSunMoon(size, state.CurrentHour, daylight);
 
-        var gridAlpha = Mathf.Lerp(0.12f, 0.055f, daylight);
-        var grid = new Color(0.18f, 0.36f, 0.44f, gridAlpha);
-        for (var x = -400; x < size.X + 400; x += 62)
+        if (_budget.DrawCityGrid)
         {
-            DrawLine(new Vector2(x, size.Y), new Vector2(x + size.Y, 0), grid, 1f);
-            DrawLine(new Vector2(x, 0), new Vector2(x + size.Y, size.Y), grid, 1f);
+            var gridAlpha = Mathf.Lerp(0.12f, 0.055f, daylight);
+            var grid = new Color(0.18f, 0.36f, 0.44f, gridAlpha);
+            for (var x = -400; x < size.X + 400; x += 62)
+            {
+                DrawLine(new Vector2(x, size.Y), new Vector2(x + size.Y, 0), grid, 1f);
+                DrawLine(new Vector2(x, 0), new Vector2(x + size.Y, size.Y), grid, 1f);
+            }
         }
     }
 
     private void DrawStars(Vector2 size, float alpha)
     {
-        for (var i = 0; i < 48; i++)
+        for (var i = 0; i < _budget.Stars; i++)
         {
             var h = StableHash($"star:{i}");
             var x = ((h & 0xFFFF) / 65535f) * size.X;
@@ -179,7 +204,7 @@ public partial class CityView : Control
         var companies = state.Companies
             .Where(c => c.Open && c.DistrictId == district.Id)
             .OrderBy(c => c.Id)
-            .Take(28)
+            .Take(_budget.MaxCompaniesPerDistrict)
             .ToArray();
 
         for (var i = 0; i < companies.Length; i++)
@@ -245,7 +270,7 @@ public partial class CityView : Control
 
         var c = center + new Vector2(0, tileH * 1.52f);
         var darkness = 1f - daylight;
-        for (var i = 0; i < 14; i++)
+        for (var i = 0; i < (_budget.DrawStreetGlow ? 14 : 8); i++)
         {
             var t = i / 13f;
             var x = Mathf.Lerp(-tileW * 1.43f, tileW * 1.43f, t);
@@ -265,8 +290,8 @@ public partial class CityView : Control
         var c = center + new Vector2(0, tileH * 1.52f);
         var span = tileW * 1.42f;
         var rush = state.CurrentHour is >= 7 and <= 9 or >= 16 and <= 19 ? 1.0f : state.CurrentHour is >= 0 and <= 5 ? 0.30f : 0.65f;
-        var countA = Math.Max(4, (int)(15 * rush));
-        var countB = Math.Max(3, (int)(12 * rush));
+        var countA = Math.Max(3, (int)(15 * rush * _budget.TrafficScale));
+        var countB = Math.Max(2, (int)(12 * rush * _budget.TrafficScale));
         var phase = (float)((_anim * (0.065 + rush * 0.055)) % 1.0);
 
         for (var i = 0; i < countA; i++)
@@ -276,8 +301,11 @@ public partial class CityView : Control
             var y = x * (tileH / tileW);
             var p = c + new Vector2(x, y);
             DrawCircle(p, 2.4f, i % 4 == 0 ? _gold : new Color(0.44f, 0.70f, 0.82f));
-            if (daylight < 0.45f)
+            if (daylight < 0.45f && _budget.DrawAmbientTrafficLights)
+            {
+                DrawCircle(p + new Vector2(2, 1), 2.8f, new Color(1f, 0.82f, 0.42f, 0.10f));
                 DrawCircle(p + new Vector2(2, 1), 0.9f, new Color(1f, 0.92f, 0.68f, 0.85f));
+            }
         }
 
         for (var i = 0; i < countB; i++)
@@ -299,7 +327,7 @@ public partial class CityView : Control
         {
             var p = DistrictCenter(center, district.GridX, district.GridY, tileW, tileH);
             var residents = state.Citizens.Count(c => c.Alive && c.DistrictId == district.Id);
-            var count = Math.Clamp((int)(residents / 35f * activityFactor), 2, 12);
+            var count = Math.Clamp((int)(residents / (float)_budget.ResidentPedestrianDivisor * activityFactor), 1, _budget.MaxPedestriansPerDistrict);
 
             for (var i = 0; i < count; i++)
             {
@@ -362,7 +390,7 @@ public partial class CityView : Control
 
         if (height > 26)
         {
-            var rows = Math.Min(5, (int)(height / 12));
+            var rows = Math.Min(_budget.WindowRows, (int)(height / 12));
             for (var r = 1; r <= rows; r++)
             {
                 var y = top.Y + r * (height / (rows + 1));
@@ -376,7 +404,7 @@ public partial class CityView : Control
             }
         }
 
-        if (height > 45 && company.Innovation > 0.55m)
+        if (_budget.DrawBuildingDetails && height > 45 && company.Innovation > 0.55m)
         {
             DrawLine(top + new Vector2(0, -depth), top + new Vector2(0, -depth - 8), color.Lightened(0.25f), 1f);
             DrawCircle(top + new Vector2(0, -depth - 9), 1.3f, _accent);
@@ -385,7 +413,7 @@ public partial class CityView : Control
 
     private void DrawTrees(Vector2 p, float tileW, float tileH, int districtId, float daylight)
     {
-        for (var i = 0; i < 8; i++)
+        for (var i = 0; i < _budget.TreesPerDistrict; i++)
         {
             var hash = StableHash($"{districtId}:{i}");
             var fx = ((hash & 0xFF) / 255f - 0.5f) * tileW * 0.57f;
@@ -405,7 +433,7 @@ public partial class CityView : Control
         if (state.Weather.Contains("Chuva", StringComparison.OrdinalIgnoreCase))
         {
             var heavy = state.Weather.Contains("forte", StringComparison.OrdinalIgnoreCase);
-            var count = heavy ? 120 : 70;
+            var count = heavy ? _budget.RainParticles : Math.Max(18, (int)(_budget.RainParticles * 0.60f));
             var speed = heavy ? 360f : 260f;
 
             for (var i = 0; i < count; i++)
@@ -421,7 +449,7 @@ public partial class CityView : Control
 
             DrawRect(new Rect2(Vector2.Zero, size), new Color(0.03f, 0.08f, 0.12f, heavy ? 0.13f : 0.07f), true);
         }
-        else if (state.Weather.Contains("Neblina", StringComparison.OrdinalIgnoreCase))
+        else if (state.Weather.Contains("Neblina", StringComparison.OrdinalIgnoreCase) && _budget.DrawWeatherAtmosphere)
         {
             DrawRect(new Rect2(Vector2.Zero, size), new Color(0.70f, 0.78f, 0.80f, 0.09f + (1f - daylight) * 0.03f), true);
             for (var i = 0; i < 5; i++)
@@ -429,6 +457,44 @@ public partial class CityView : Control
                 var y = size.Y * (0.25f + i * 0.13f);
                 var drift = (float)Math.Sin(_anim * 0.08 + i) * 45f;
                 DrawRect(new Rect2(-80 + drift, y, size.X + 160, 28), new Color(0.76f, 0.83f, 0.84f, 0.025f), true);
+            }
+        }
+    }
+
+    private void DrawEconomicPulse(GameState state, Vector2 center, float tileW, float tileH, float daylight)
+    {
+        if (!_budget.DrawBuildingDetails) return;
+
+        foreach (var district in state.Districts)
+        {
+            var companies = state.Companies.Where(c => c.Open && c.DistrictId == district.Id).ToArray();
+            if (companies.Length == 0) continue;
+
+            var p = DistrictCenter(center, district.GridX, district.GridY, tileW, tileH);
+            var healthy = companies.Count(c => c.OperatingStatus == "Ativa");
+            var crisis = companies.Count(c => c.OperatingStatus == "Crise");
+            var avgShare = companies.Average(c => c.MarketShare);
+            var activity = Math.Clamp(healthy / (float)companies.Length + (float)avgShare * 0.8f - crisis * 0.03f, 0.12f, 1.25f);
+
+            var pulse = 0.5f + 0.5f * MathF.Sin((float)_anim * 1.6f + district.Id);
+            var radius = tileW * (0.20f + activity * 0.035f) + pulse * 2f;
+            var alpha = 0.015f + activity * 0.015f;
+            var color = crisis > healthy / 2
+                ? new Color(1.0f, 0.34f, 0.24f, alpha)
+                : new Color(0.24f, 0.84f, 0.82f, alpha);
+
+            DrawCircle(p + new Vector2(0, tileH * 0.02f), radius, color);
+        }
+
+        if (state.Player.BusinessCompanyId is int companyId)
+        {
+            var company = state.Companies.FirstOrDefault(c => c.Id == companyId && c.Open);
+            if (company is not null)
+            {
+                var district = state.Districts.First(d => d.Id == company.DistrictId);
+                var p = DistrictCenter(center, district.GridX, district.GridY, tileW, tileH);
+                var pulse = 0.5f + 0.5f * MathF.Sin((float)_anim * 3.1f);
+                DrawArc(p - new Vector2(0, tileH * 0.10f), 18f + pulse * 4f, 0, MathF.Tau, 36, new Color(_gold.R, _gold.G, _gold.B, 0.45f), 1.8f, true);
             }
         }
     }
