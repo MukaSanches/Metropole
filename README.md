@@ -2,66 +2,118 @@
 
 METRÓPOLE ∞ é um simulador sistêmico para Windows em que vida pessoal, trabalho, empresas, mercados, bairros e cidadãos evoluem continuamente.
 
-## Versão 1.2.0 — Vida & Empresas Profundas
+## Versão 1.3.0 — Renderer Adaptativo
 
-A 1.2 amplia o jogo de um simulador econômico para uma simulação integrada de vida e negócios:
+A 1.3 preserva toda a simulação de vida e empresas da 1.2 e muda o teto gráfico do jogo.
 
-- relógio horário com rotina diária, trabalho, sono, estudo, lazer e deslocamento;
-- necessidades de energia, fome, saúde, estresse, felicidade, vida social e condicionamento;
-- educação, experiência profissional, reputação de carreira e relacionamentos;
-- cidadãos com personalidade, escolaridade, atividade atual, humor, estresse, parceiro e mobilidade profissional;
-- painel **Pessoas** para acompanhar vidas individuais e acontecimentos humanos;
-- branding empresarial com nome de marca, slogan, awareness e fidelidade;
-- estratégias de preço, orçamento de marketing, qualidade, inovação e reputação;
-- RH com salários, moral, vagas, produtividade e troca de empregos;
-- DRE diária com receita, folha, operação, aluguel, marketing, impostos e resultado;
-- histórico financeiro de 90 dias com gráfico;
-- market share, rival direto e intensidade de rivalidade;
-- IA concorrente que ajusta preço, marketing e estratégia;
-- demanda institucional para estabilizar a circulação monetária sem criar dinheiro;
-- recuperação do ecossistema empresarial quando a quantidade de empresas cai;
-- estados empresariais Ativa, Atenção, Crise e Encerrada;
-- ciclo visual dia/noite, clima, chuva, neblina, estrelas, luzes, tráfego e pedestres;
-- cidade procedural enriquecida sem depender de assets externos proprietários.
+### Cidade premium
 
-## Referências de design
+Em hardware compatível, o jogo usa o caminho 3D/2.5D:
 
-A arquitetura da 1.2 foi pesquisada contra padrões de simuladores de vida, cidade e negócios como Software Inc., Big Ambitions, Capitalism Lab, Cities: Skylines II e The Sims 4. As mecânicas foram reinterpretadas para o METRÓPOLE, sem copiar código ou assets. Veja `docs/RESEARCH_V1.2.md`.
+- Godot Forward+;
+- câmera 3D ortográfica isométrica;
+- zoom e pan suaves;
+- prédios 3D procedurais;
+- bairros com riqueza/atividade refletidas visualmente;
+- empresa do jogador destacada;
+- estados empresariais refletidos na aparência;
+- estradas, calçadas e malha urbana;
+- árvores instanciadas;
+- tráfego instanciado e variável por horário;
+- pedestres instanciados e afetados por horário/clima;
+- iluminação solar dinâmica;
+- dia/noite;
+- chuva e neblina;
+- SSAO, SSIL, glow e volumetric fog ativados somente quando renderer/perfil permitem.
+
+### Desempenho
+
+A arquitetura foi desenhada para evitar a regra “um Node para cada cidadão”.
+
+- MultiMesh agrupa prédios, árvores, carros e pedestres;
+- a população lógica continua no núcleo C# determinístico;
+- só proxies visuais são renderizados;
+- a densidade visual é ajustada sem alterar a economia;
+- o renderer antigo em CanvasItem permanece como fallback leve;
+- se o Godot cair em gl_compatibility, o jogo escolhe automaticamente o renderer 2D;
+- perfil AUTO monitora frame time e reduz/aumenta densidade com histerese;
+- perfis manuais Ultra / High / Medium / Low podem ser selecionados na própria tela da cidade.
+
+### Validação
+
+O pipeline Windows testa separadamente:
+
+1. simulação e matriz multi-seed;
+2. compilação Godot C#;
+3. importação;
+4. exportação Windows;
+5. interface no renderer automático;
+6. estrutura 3D premium forçada em Compatibility;
+7. fallback 2D forçado;
+8. smoke test do executável;
+9. geração do instalador;
+10. instalação silenciosa;
+11. execução pós-instalação;
+12. SHA-256.
+
+## Simulação
+
+A 1.3 mantém os sistemas anteriores:
+
+- relógio horário;
+- energia, fome, saúde, estresse, felicidade, social e condicionamento;
+- estudo e progressão profissional;
+- cidadãos com personalidade e rotina;
+- emprego e mobilidade profissional;
+- relacionamentos;
+- bairros;
+- mercados;
+- empresas;
+- branding;
+- preço e estratégia;
+- marketing;
+- qualidade e P&D;
+- RH;
+- DRE;
+- dívida e capital de giro;
+- market share;
+- rivalidade;
+- IA concorrente;
+- crise e falência;
+- histórico financeiro;
+- sucessão.
 
 ## Tecnologia
 
 - Godot Engine 4.7.2 stable .NET
 - C# / .NET 8
-- Compatibility renderer
-- desenho procedural 2D via CanvasItem
+- Forward+ como caminho gráfico premium
+- Compatibility como fallback
+- SubViewport + Camera3D ortográfica
+- MultiMesh para instancing
+- CanvasItem renderer 2D preservado
 - núcleo de simulação separado da camada gráfica
 - Inno Setup para Windows
-- assets SVG próprios
 
-## Loop de jogo
+## Engenharia Godot
 
-1. Crie ou continue um mundo.
-2. Use **Vida** para administrar tempo, saúde, estresse, estudo e socialização.
-3. Use **Carreira** para conseguir emprego e construir patrimônio.
-4. Acompanhe cidadãos reais em **Pessoas**.
-5. Leia oferta, demanda e preços em **Mercado**.
-6. Mude de bairro em **Cidade** conforme custo e qualidade de vida.
-7. Funde uma empresa com Cr$ 5.000.
-8. Defina marca, slogan, preço, marketing, salários, vagas, qualidade e P&D.
-9. Acompanhe DRE, caixa, dívida, market share e o rival direto.
-10. Acelere o relógio e observe cidadãos e empresas reagirem ao mesmo sistema.
+A referência permanente do projeto está em:
+
+- skills/godot-master/SKILL.md
+- docs/GODOT_VISUAL_MECHANICS_ROADMAP.md
+- docs/RESEARCH_V1.2.md
 
 ## Build local
 
 Requer Godot 4.7.2 .NET e .NET 8.
 
-```powershell
+~~~powershell
 dotnet build src/Metropole.Sim/Metropole.Sim.csproj -c Release
 dotnet run --project tests/Metropole.SimTests/Metropole.SimTests.csproj -c Release
 dotnet build src/Metropole.Game/Metropole.Game.csproj -c Release
 godot --headless --path src/Metropole.Game --export-release Windows build/Metropole.exe
-```
+~~~
 
 ## Licenças
 
-O jogo usa Godot Engine sob licença MIT. Consulte `THIRD_PARTY_NOTICES.md`.
+O jogo usa Godot Engine sob licença MIT. Consulte THIRD_PARTY_NOTICES.md.
