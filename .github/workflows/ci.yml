@@ -70,21 +70,55 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Godot export failed: $LASTEXITCODE" }
           if (!(Test-Path build/Metropole.exe)) { throw "Metropole.exe not produced" }
 
-      - name: Validate exported gameplay UI
+      - name: Validate exported gameplay UI - automatic renderer
         shell: pwsh
         run: |
           $env:METROPOLE_UI_VALIDATION = "1"
-          $stdout = Join-Path $pwd "ui-validation.out"
-          $stderr = Join-Path $pwd "ui-validation.err"
+          $stdout = Join-Path $pwd "ui-validation-auto.out"
+          $stderr = Join-Path $pwd "ui-validation-auto.err"
           $proc = Start-Process -FilePath "$pwd/build/Metropole.exe" -ArgumentList "--headless","--quit-after","1200" -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
           if (!$proc.WaitForExit(45000)) {
             Stop-Process -Id $proc.Id -Force
-            throw "Exported gameplay UI validation timed out after 45 seconds"
+            throw "Automatic renderer UI validation timed out after 45 seconds"
           }
           $joined = ((Get-Content $stdout -Raw -ErrorAction SilentlyContinue) + "`n" + (Get-Content $stderr -Raw -ErrorAction SilentlyContinue))
           Write-Host $joined
-          if ($proc.ExitCode -ne 0) { throw "Exported gameplay UI validation failed with exit code $($proc.ExitCode)" }
-          if ($joined -notmatch "METROPOLE_UI_VALIDATION_OK") { throw "Exported gameplay UI success marker was not produced" }
+          if ($proc.ExitCode -ne 0) { throw "Automatic renderer UI validation failed with exit code $($proc.ExitCode)" }
+          if ($joined -notmatch "METROPOLE_UI_VALIDATION_OK") { throw "Automatic renderer UI success marker was not produced" }
+
+      - name: Validate premium city structure on Compatibility
+        shell: pwsh
+        run: |
+          $env:METROPOLE_UI_VALIDATION = "1"
+          $env:METROPOLE_FORCE_PREMIUM = "1"
+          $stdout = Join-Path $pwd "ui-validation-premium.out"
+          $stderr = Join-Path $pwd "ui-validation-premium.err"
+          $proc = Start-Process -FilePath "$pwd/build/Metropole.exe" -ArgumentList "--headless","--rendering-method","gl_compatibility","--quit-after","1200" -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+          if (!$proc.WaitForExit(45000)) {
+            Stop-Process -Id $proc.Id -Force
+            throw "Premium city validation timed out after 45 seconds"
+          }
+          $joined = ((Get-Content $stdout -Raw -ErrorAction SilentlyContinue) + "`n" + (Get-Content $stderr -Raw -ErrorAction SilentlyContinue))
+          Write-Host $joined
+          if ($proc.ExitCode -ne 0) { throw "Premium city structure validation failed with exit code $($proc.ExitCode)" }
+          if ($joined -notmatch "METROPOLE_UI_VALIDATION_OK") { throw "Premium city success marker was not produced" }
+
+      - name: Validate lightweight 2D fallback
+        shell: pwsh
+        run: |
+          $env:METROPOLE_UI_VALIDATION = "1"
+          $env:METROPOLE_FORCE_FALLBACK = "1"
+          $stdout = Join-Path $pwd "ui-validation-fallback.out"
+          $stderr = Join-Path $pwd "ui-validation-fallback.err"
+          $proc = Start-Process -FilePath "$pwd/build/Metropole.exe" -ArgumentList "--headless","--rendering-method","gl_compatibility","--quit-after","1200" -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+          if (!$proc.WaitForExit(45000)) {
+            Stop-Process -Id $proc.Id -Force
+            throw "2D fallback validation timed out after 45 seconds"
+          }
+          $joined = ((Get-Content $stdout -Raw -ErrorAction SilentlyContinue) + "`n" + (Get-Content $stderr -Raw -ErrorAction SilentlyContinue))
+          Write-Host $joined
+          if ($proc.ExitCode -ne 0) { throw "2D fallback validation failed with exit code $($proc.ExitCode)" }
+          if ($joined -notmatch "METROPOLE_UI_VALIDATION_OK") { throw "2D fallback success marker was not produced" }
 
       - name: Smoke launch exported game
         shell: pwsh
