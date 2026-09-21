@@ -222,6 +222,7 @@ public partial class CityView : Control
         }
 
         DrawTrees(p, tileW, tileH, district.Id, daylight);
+        DrawClosedBusinessScars(state, district, p, tileW, tileH);
     }
 
     private void DrawDistrictParks(DistrictState district, Vector2 p, float tileW, float tileH, float daylight)
@@ -408,6 +409,62 @@ public partial class CityView : Control
         {
             DrawLine(top + new Vector2(0, -depth), top + new Vector2(0, -depth - 8), color.Lightened(0.25f), 1f);
             DrawCircle(top + new Vector2(0, -depth - 9), 1.3f, _accent);
+        }
+
+        if (_budget.DrawBuildingDetails)
+        {
+            var signY = top.Y + height * 0.62f;
+            var signWidth = MathF.Max(5f, width * 0.62f);
+            var signColor = company.OperatingStatus switch
+            {
+                "Crise" => new Color(1.0f, 0.28f, 0.20f, 0.82f),
+                "Atenção" => new Color(0.96f, 0.72f, 0.29f, 0.82f),
+                _ => color.Lightened(0.24f)
+            };
+            DrawLine(
+                new Vector2(basePoint.X - signWidth * 0.5f, signY),
+                new Vector2(basePoint.X + signWidth * 0.5f, signY),
+                signColor, company.PlayerOwned ? 3.0f : 2.0f, true);
+
+            if (company.Strategy == "Crescimento" && company.AgeDays < 240)
+            {
+                var craneBase = top - new Vector2(width * 0.25f, depth + 2f);
+                DrawLine(craneBase, craneBase - new Vector2(0, 18), _gold, 1.2f);
+                DrawLine(craneBase - new Vector2(0, 18), craneBase + new Vector2(15, -18), _gold, 1.2f);
+                DrawLine(craneBase + new Vector2(11, -18), craneBase + new Vector2(11, -7), _gold, 0.8f);
+            }
+
+            if (company.LastRevenue > 2_500m)
+            {
+                var truck = basePoint + new Vector2(width * 0.7f, depth + 3f);
+                DrawRect(new Rect2(truck.X - 4, truck.Y - 2, 7, 3), color.Lightened(0.18f), true);
+                DrawRect(new Rect2(truck.X + 2, truck.Y - 1, 3, 2), color.Darkened(0.08f), true);
+                DrawCircle(truck + new Vector2(-2, 2), 1.1f, new Color(0.03f, 0.04f, 0.05f));
+                DrawCircle(truck + new Vector2(3, 2), 1.1f, new Color(0.03f, 0.04f, 0.05f));
+            }
+        }
+    }
+
+    private void DrawClosedBusinessScars(GameState state, DistrictState district, Vector2 p, float tileW, float tileH)
+    {
+        if (!_budget.DrawBuildingDetails) return;
+
+        var closed = state.Companies
+            .Where(c => !c.Open && c.DistrictId == district.Id)
+            .OrderByDescending(c => c.AgeDays)
+            .Take(3)
+            .ToArray();
+
+        for (var i = 0; i < closed.Length; i++)
+        {
+            var h = StableHash($"closed:{district.Id}:{closed[i].Id}");
+            var ox = (((h & 0xFF) / 255f) - 0.5f) * tileW * 0.36f;
+            var oy = ((((h >> 8) & 0xFF) / 255f) - 0.5f) * tileH * 0.24f;
+            var pos = p + new Vector2(ox - oy, (ox + oy) * 0.43f + tileH * 0.12f);
+
+            DrawRect(new Rect2(pos.X - 5, pos.Y - 3, 10, 5), new Color(0.12f, 0.13f, 0.14f, 0.78f), true);
+            DrawLine(pos + new Vector2(-4, -1), pos + new Vector2(4, -1), new Color(0.62f, 0.18f, 0.16f, 0.80f), 1.2f);
+            DrawLine(pos + new Vector2(-3, -3), pos + new Vector2(3, 2), new Color(0.80f, 0.28f, 0.22f, 0.65f), 1.0f);
         }
     }
 
