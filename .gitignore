@@ -1,0 +1,10 @@
+.godot/
+.vs/
+.vscode/
+bin/
+obj/
+export/
+build/
+*.user
+*.tmp
+*.log
