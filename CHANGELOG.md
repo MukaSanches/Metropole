@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.3.0 - 2026-09-21
+
+### Renderer
+- Forward+ passa a ser o caminho gráfico premium;
+- fallback automático mantém Compatibility/CanvasItem para hardware leve;
+- nova cidade 3D/2.5D com câmera ortográfica;
+- zoom e pan;
+- prédios, árvores, tráfego e pedestres por MultiMesh;
+- estados empresariais e bairros influenciam a representação visual;
+- sol e iluminação atmosférica por horário;
+- chuva e neblina;
+- SSAO/SSIL/glow/volumetric fog condicionais ao renderer e perfil.
+
+### Performance
+- perfis Auto, Ultra, High, Medium e Low;
+- Auto monitora frame time e ajusta densidade sem alterar a simulação;
+- milhares de entidades lógicas não viram milhares de Nodes;
+- grupos instanciados têm visible_instance_count ajustável;
+- cidade premium só reconstrói estrutura em mudanças relevantes;
+- renderer 2D da 1.2 preservado como modo de segurança.
+
+### QA
+- validação do executável com renderer automático;
+- validação explícita da cidade premium;
+- validação explícita do fallback 2D;
+- export, instalação e execução pós-instalação continuam obrigatórios.
+
 ## 1.2.0 - 2026-09-21
 
 ### Vida
@@ -28,20 +55,6 @@
 - demanda institucional com transferência real do Tesouro;
 - custos separados em folha, operação, aluguel, marketing e tributos;
 - ajuste de sobrevivência empresarial e nascimento de novos negócios.
-
-### Gráficos
-- dia/noite;
-- sol, lua e estrelas;
-- chuva e neblina;
-- iluminação noturna;
-- tráfego variável por horário;
-- pedestres;
-- parques e cidade procedural mais detalhada;
-- novos ícones Vida e Pessoas.
-
-### Qualidade
-- novos testes para relógio horário, vida, branding, finanças e resiliência econômica;
-- instalador e pipeline Windows atualizados para 1.2.0.
 
 ## 1.1.0 - 2026-09-21
 
