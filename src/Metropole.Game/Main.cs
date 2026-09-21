@@ -96,13 +96,28 @@ public partial class Main : Control
             _sim.Study(4);
             _sim.AdvanceHours(30);
 
-            foreach (var mode in Enum.GetValues<SidebarMode>())
+            foreach (var size in new[]
+                     {
+                         new Vector2I(1280, 720),
+                         new Vector2I(1600, 900),
+                         new Vector2I(1920, 1080)
+                     })
             {
-                _mode = mode;
-                RefreshAll();
+                GetWindow().Size = size;
+                foreach (var profile in Enum.GetValues<GraphicsProfile>())
+                {
+                    _cityView?.SetGraphicsProfile(profile);
+                    foreach (var mode in Enum.GetValues<SidebarMode>())
+                    {
+                        _mode = mode;
+                        RefreshAll();
+                    }
+                }
             }
 
-            GD.Print($"METROPOLE_UI_VALIDATION_OK day={_sim.State.CurrentDay} hour={_sim.State.CurrentHour} companies={_sim.State.OpenCompanies} population={_sim.State.Population}");
+            _cityView?.SetGraphicsProfile(GraphicsProfile.Auto);
+
+            GD.Print($"METROPOLE_UI_VALIDATION_OK day={_sim.State.CurrentDay} hour={_sim.State.CurrentHour} companies={_sim.State.OpenCompanies} population={_sim.State.Population} graphics={_cityView?.GraphicsStatusText}");
             GetTree().Quit(0);
         }
         catch (Exception ex)
