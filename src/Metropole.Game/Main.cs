@@ -411,7 +411,7 @@ public partial class Main : Control
         _cityView = null;
         _premiumCityView = null;
 
-        if (GraphicsQuality.SupportsPremium3D)
+        if (GraphicsQuality.UsePremium3D)
         {
             _premiumCityView = new PremiumCityView
             {
@@ -441,7 +441,7 @@ public partial class Main : Control
         footer.AddChild(MakeLegend(_muted, "Economia local"));
         footer.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
         footer.AddChild(MakeLabel(
-            GraphicsQuality.SupportsPremium3D
+            GraphicsQuality.UsePremium3D
                 ? "2.5D • MultiMesh • qualidade adaptativa • zoom/pan"
                 : "fallback leve • dia/noite • clima • tráfego",
             10, _muted2, false));
