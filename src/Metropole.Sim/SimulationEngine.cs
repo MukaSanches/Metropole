@@ -1,6 +1,6 @@
 namespace Metropole.Sim;
 
-public sealed class SimulationEngine
+public sealed partial class SimulationEngine
 {
     public GameState State { get; }
 
@@ -30,6 +30,7 @@ public sealed class SimulationEngine
         ProcessDemography(rng);
         ProcessCompanyBirths(rng);
         ProcessPlayerSuccession(rng);
+        ProcessDeepSystems(rng);
         CompactHistory();
 
         SimulationValidator.Validate(State);
@@ -155,6 +156,11 @@ public sealed class SimulationEngine
         {
             company.LastRevenue = 0m;
             company.LastCosts = 0m;
+            company.LastPayroll = 0m;
+            company.LastMarketing = 0m;
+            company.LastRent = 0m;
+            company.LastOperations = 0m;
+            company.LastTaxes = 0m;
         }
     }
 
@@ -169,7 +175,15 @@ public sealed class SimulationEngine
             var citizenPayroll = employees.Sum(c => c.DailyWage);
             var playerPayroll = State.Player.EmployerCompanyId == company.Id ? State.Player.DailyWage : 0m;
             var payroll = citizenPayroll + playerPayroll;
-            var operations = decimal.Round((20m + employees.Length * 3.5m) * CompanyDistrict(company).LogisticsIndex, 2);
+            var district = CompanyDistrict(company);
+            var baseOperations = decimal.Round((18m + employees.Length * 3.0m) * district.LogisticsIndex, 2);
+            var rent = decimal.Round((10m + Math.Max(1, company.DesiredEmployees) * 1.8m) * district.RentIndex, 2);
+            var marketing = decimal.Round(Math.Max(0m, company.MarketingBudgetDaily), 2);
+            var operations = baseOperations + rent + marketing;
+            company.LastPayroll = payroll;
+            company.LastOperations = baseOperations;
+            company.LastRent = rent;
+            company.LastMarketing = marketing;
             var required = payroll + operations;
 
             if (company.Cash < required)
@@ -234,24 +248,28 @@ public sealed class SimulationEngine
             var market = State.Markets[rng.NextInt(0, State.Markets.Count)];
             if (market.Stock <= 0.01m) continue;
 
-            var budget = citizen.EmployedCompanyId is null ? 4m : 10m + citizen.SkillTier;
+            var budget = citizen.EmployedCompanyId is null
+                ? 5m + citizen.SkillTier
+                : 12m + citizen.SkillTier * 2m;
             budget = Math.Min(budget, citizen.Cash);
             if (budget <= 0m) continue;
-
-            var units = Math.Min(market.Stock, budget / Math.Max(1m, market.Price));
-            var spend = Math.Min(citizen.Cash, decimal.Round(units * market.Price, 2));
-            if (spend <= 0m) continue;
 
             var sellers = State.Companies.Where(c => c.Open && c.ProductFamily == market.Family).ToArray();
             if (sellers.Length == 0) continue;
 
-            var seller = sellers[rng.NextInt(0, sellers.Length)];
+            var seller = SelectCompetitiveSeller(sellers, citizen, market, rng);
+            var unitPrice = decimal.Round(market.Price * Clamp(seller.PriceMultiplier, 0.72m, 1.45m), 2);
+            var units = Math.Min(market.Stock, budget / Math.Max(1m, unitPrice));
+            var spend = Math.Min(citizen.Cash, decimal.Round(units * unitPrice, 2));
+            if (spend <= 0m) continue;
+
             citizen.Cash -= spend;
             seller.Cash += spend;
             seller.LastRevenue += spend;
             market.Stock -= units;
             market.DailyDemand += units;
             citizen.Hunger = Clamp(citizen.Hunger - (market.Family == "Alimentos" ? 18m : 2m), 0m, 100m);
+            citizen.Happiness = Clamp(citizen.Happiness + seller.ProductQuality * 0.25m, 0m, 100m);
         }
 
         if (State.CurrentDay % 7 == 0)
@@ -273,7 +291,10 @@ public sealed class SimulationEngine
         {
             var market = State.Markets.First(m => m.Family == company.ProductFamily);
             var workforce = company.EmployeeIds.Count + (company.PlayerOwned ? 1 : 0);
-            var output = decimal.Round((2m + workforce * 2.2m) * company.Productivity, 3);
+            var humanFactor = 0.70m + Clamp(company.EmployeeMorale, 0m, 1m) * 0.30m;
+            var qualityFactor = 0.86m + Clamp(company.ProductQuality, 0m, 1m) * 0.18m;
+            var innovationFactor = 0.92m + Clamp(company.Innovation, 0m, 1m) * 0.16m;
+            var output = decimal.Round((2m + workforce * 2.2m) * company.Productivity * humanFactor * qualityFactor * innovationFactor, 3);
             market.Stock += output;
             market.DailySupply += output;
 
@@ -288,12 +309,14 @@ public sealed class SimulationEngine
                 company.Cash -= tax;
                 State.Treasury += tax;
                 company.LastCosts += tax;
+                company.LastTaxes = tax;
             }
 
             if (company.LossDays > 18 && company.EmployeeIds.Count > 1)
                 company.DesiredEmployees = Math.Max(1, company.DesiredEmployees - 1);
 
-            if (company.LossDays > 45 && company.Debt >= CreditLimit(company) * 0.85m && company.Cash < company.BaseWage * 3m)
+            var closureThreshold = company.PlayerOwned ? 95 : 70;
+            if (company.LossDays > closureThreshold && company.Debt >= CreditLimit(company) * 0.90m && company.Cash < company.BaseWage * 3m)
                 CloseCompany(company, "receita insuficiente → perdas persistentes → dívida elevada → crédito esgotado → insolvência");
         }
 
@@ -447,6 +470,7 @@ public sealed class SimulationEngine
     private void CloseCompany(CompanyState company, string cause)
     {
         company.Open = false;
+        company.OperatingStatus = "Encerrada";
         company.ClosureCause = cause;
         foreach (var workerId in company.EmployeeIds.ToArray())
         {
@@ -463,6 +487,8 @@ public sealed class SimulationEngine
             State.Player.EmployerCompanyId = null;
             State.Player.DailyWage = 0m;
         }
+        if (State.Player.BusinessCompanyId == company.Id)
+            State.Player.BusinessCompanyId = null;
         AddHistory("Falência", $"{company.Name} encerrou as atividades.", cause, company.Id);
     }
 
@@ -503,6 +529,14 @@ public static class SimulationValidator
             throw new InvalidDataException("Cidadão com caixa negativo.");
         if (state.Player.Cash < 0m)
             throw new InvalidDataException("Jogador com caixa negativo.");
+        if (state.CurrentHour is < 0 or > 23)
+            throw new InvalidDataException("Hora da simulação inválida.");
+        if (state.Player.Health is < 0m or > 100m || state.Player.Stress is < 0m or > 100m ||
+            state.Player.Happiness is < 0m or > 100m || state.Player.Social is < 0m or > 100m)
+            throw new InvalidDataException("Indicadores de vida do jogador fora do intervalo.");
+        if (state.Companies.Any(c => c.BrandAwareness is < 0m or > 1m || c.ProductQuality is < 0m or > 1m ||
+                                     c.EmployeeMorale is < 0m or > 1m || c.PriceMultiplier <= 0m))
+            throw new InvalidDataException("Indicadores empresariais inválidos.");
 
         var openCompanyIds = state.Companies.Where(c => c.Open).Select(c => c.Id).ToHashSet();
         foreach (var citizen in state.Citizens.Where(c => c.Alive && c.EmployedCompanyId is not null))
