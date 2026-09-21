@@ -18,12 +18,13 @@ public partial class ExternalAssetLayer : Node3D
     private sealed class PersonProxy
     {
         public required Node3D Node { get; init; }
-        public required int DistrictIndex { get; init; }
+        public required int CitizenId { get; init; }
         public required bool AlongX { get; init; }
         public required float Edge { get; init; }
         public required float Speed { get; init; }
         public required float Phase { get; init; }
         public AnimationPlayer? Animation { get; init; }
+        public string CurrentMotion { get; set; } = "";
     }
 
     private SimulationEngine? _engine;
@@ -120,6 +121,8 @@ public partial class ExternalAssetLayer : Node3D
     {
         if (!_built) return;
 
+        ApplyQuality(quality);
+
         var rainFactor = state.Weather.Contains("Chuva", StringComparison.OrdinalIgnoreCase) ? 0.76f : 1f;
         var rushFactor = state.CurrentHour is >= 7 and <= 9 or >= 16 and <= 19 ? 1.18f : 0.86f;
 
@@ -145,9 +148,39 @@ public partial class ExternalAssetLayer : Node3D
         {
             if (!proxy.Node.Visible || districts.Count == 0) continue;
 
-            var district = districts[proxy.DistrictIndex % districts.Count];
+            var citizen = state.Citizens.FirstOrDefault(c => c.Id == proxy.CitizenId && c.Alive);
+            if (citizen is null)
+            {
+                proxy.Node.Visible = false;
+                continue;
+            }
+
+            var activity = citizen.CurrentActivity ?? "";
+            var indoors =
+                activity.Contains("Dorm", StringComparison.OrdinalIgnoreCase) ||
+                activity.Contains("Casa", StringComparison.OrdinalIgnoreCase);
+
+            if (indoors)
+            {
+                proxy.Node.Visible = false;
+                continue;
+            }
+
+            var district = districts.FirstOrDefault(d => d.Id == citizen.DistrictId) ?? districts[0];
             var center = DistrictPosition(district);
-            var phase = (float)((proxy.Phase + time * proxy.Speed * rainFactor) % 1.0);
+
+            var moving =
+                activity.Contains("Trabal", StringComparison.OrdinalIgnoreCase) ||
+                activity.Contains("Estud", StringComparison.OrdinalIgnoreCase) ||
+                activity.Contains("Lazer", StringComparison.OrdinalIgnoreCase) ||
+                activity.Contains("Desloc", StringComparison.OrdinalIgnoreCase);
+
+            EnsureAnimation(proxy, moving ? "walk" : "idle");
+            if (proxy.Animation is not null)
+                proxy.Animation.SpeedScale = moving ? 0.88f + (citizen.Energy / 100f) * 0.22f : 0.75f;
+
+            var activitySpeed = moving ? 1f : 0.18f;
+            var phase = (float)((proxy.Phase + time * proxy.Speed * rainFactor * activitySpeed) % 1.0);
             var travel = Mathf.Lerp(-4.6f, 4.6f, phase);
 
             proxy.Node.Position = proxy.AlongX
@@ -155,8 +188,6 @@ public partial class ExternalAssetLayer : Node3D
                 : center + new Vector3(proxy.Edge, 0.12f, travel);
             proxy.Node.Rotation = new Vector3(0, proxy.AlongX ? -Mathf.Pi / 2f : 0f, 0);
         }
-
-        ApplyQuality(quality);
     }
 
     private void BuildLandmarks()
@@ -222,8 +253,15 @@ public partial class ExternalAssetLayer : Node3D
         if (_engine is null) return;
         const int count = 30;
 
-        for (var i = 0; i < count; i++)
+        var citizens = _engine.State.Citizens
+            .Where(c => c.Alive)
+            .OrderBy(c => c.Id)
+            .Take(count)
+            .ToArray();
+
+        for (var i = 0; i < citizens.Length; i++)
         {
+            var citizen = citizens[i];
             var node = InstantiateScene(CharacterScenes[i % CharacterScenes.Length]);
             if (node is null) continue;
 
@@ -233,16 +271,17 @@ public partial class ExternalAssetLayer : Node3D
             var animation = FindAnimationPlayer(node);
             PlayBestAnimation(animation, "walk");
 
-            var hash = StableHash($"detail-person:{i}");
+            var hash = StableHash($"detail-person:{citizen.Id}");
             _people.Add(new PersonProxy
             {
                 Node = node,
-                DistrictIndex = i % Math.Max(1, _engine.State.Districts.Count),
+                CitizenId = citizen.Id,
                 AlongX = (hash & 1) == 0,
                 Edge = ((hash >> 2) & 1) == 0 ? 4.72f : -4.72f,
                 Speed = 0.010f + Hash01(hash >> 7) * 0.008f,
                 Phase = Hash01(hash >> 12),
-                Animation = animation
+                Animation = animation,
+                CurrentMotion = "walk"
             });
         }
     }
@@ -275,6 +314,15 @@ public partial class ExternalAssetLayer : Node3D
             if (found is not null) return found;
         }
         return null;
+    }
+
+    private static void EnsureAnimation(PersonProxy proxy, string preferredToken)
+    {
+        if (proxy.Animation is null || string.Equals(proxy.CurrentMotion, preferredToken, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        PlayBestAnimation(proxy.Animation, preferredToken);
+        proxy.CurrentMotion = preferredToken;
     }
 
     private static void PlayBestAnimation(AnimationPlayer? player, string preferredToken)
