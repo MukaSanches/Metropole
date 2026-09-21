@@ -258,7 +258,7 @@ public partial class Main : Control
             $"{metrics.ProfessionArchetypes:N0} profissões • {metrics.BusinessArchetypes:N0} negócios\n" +
             $"{metrics.Products:N0} produtos • {metrics.Events:N0} eventos combináveis",
             12, _muted));
-        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.1.0", 11, _muted2, false));
+        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.2.0", 11, _muted2, false));
     }
 
     private void BuildGameScreen()
@@ -419,7 +419,7 @@ public partial class Main : Control
         footer.AddChild(MakeLegend(_gold, "Sua empresa"));
         footer.AddChild(MakeLegend(_muted, "Economia local"));
         footer.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
-        footer.AddChild(MakeLabel("mapa procedural • tráfego animado", 10, _muted2, false));
+        footer.AddChild(MakeLabel("dia/noite • clima • pedestres • tráfego vivo", 10, _muted2, false));
         box.AddChild(footer);
         return panel;
     }
