@@ -177,7 +177,7 @@ public partial class ExternalAssetLayer : Node3D
 
             EnsureAnimation(proxy, moving ? "walk" : "idle");
             if (proxy.Animation is not null)
-                proxy.Animation.SpeedScale = moving ? 0.88f + (citizen.Energy / 100f) * 0.22f : 0.75f;
+                proxy.Animation.SpeedScale = moving ? 0.88f + (float)(citizen.Energy / 100m) * 0.22f : 0.75f;
 
             var activitySpeed = moving ? 1f : 0.18f;
             var phase = (float)((proxy.Phase + time * proxy.Speed * rainFactor * activitySpeed) % 1.0);
