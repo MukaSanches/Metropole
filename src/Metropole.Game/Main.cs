@@ -43,7 +43,7 @@ public partial class Main : Control
 
         var validationRequested =
             OS.GetCmdlineUserArgs().Contains("--validation-run") ||
-            string.Equals(Environment.GetEnvironmentVariable("METROPOLE_UI_VALIDATION"), "1", StringComparison.Ordinal);
+            string.Equals(System.Environment.GetEnvironmentVariable("METROPOLE_UI_VALIDATION"), "1", StringComparison.Ordinal);
 
         if (validationRequested)
         {
