@@ -1,11 +1,11 @@
 ; Engine configuration file.
-; METRÓPOLE ∞ 1.2.0
+; METRÓPOLE ∞ 1.3.0
 config_version=5
 
 [application]
 config/name="METRÓPOLE ∞"
 config/description="Simulador sistêmico de sociedade e economia"
-config/version="1.2.0"
+config/version="1.3.0"
 run/main_scene="res://Main.tscn"
 config/features=PackedStringArray("4.7", "C#")
 config/icon="res://assets/ui/app_icon.svg"
@@ -18,8 +18,8 @@ window/size/window_height_override=900
 window/stretch/mode="canvas_items"
 
 [rendering]
-renderer/rendering_method="gl_compatibility"
-renderer/rendering_method.mobile="gl_compatibility"
+renderer/rendering_method="forward_plus"
+renderer/rendering_method.mobile="mobile"
 textures/default_filters/use_nearest_mipmap_filter=false
 
 [dotnet]
