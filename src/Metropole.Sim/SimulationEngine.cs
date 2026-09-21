@@ -25,6 +25,7 @@ public sealed partial class SimulationEngine
         ResetMarketCounters();
         ProcessCompaniesAndPayroll(rng);
         ProcessConsumption(rng);
+        ProcessInstitutionalDemand(rng);
         ProcessProductionAndPrices();
         ProcessEmployment(rng);
         ProcessDemography(rng);
@@ -144,8 +145,6 @@ public sealed partial class SimulationEngine
 
         foreach (var citizen in State.Citizens.Where(c => c.Alive))
             citizen.AgeDays++;
-
-        ProcessInstitutionalDemand(rng);
 
         if (State.CurrentDay % 7 == 0)
         {
