@@ -465,6 +465,16 @@ public sealed partial class SimulationEngine
         State.Player.Hunger = 15m;
         State.Player.Energy = 100m;
         State.Player.Children = Math.Max(0, State.Player.Children - 1);
+        State.Player.PartnerCitizenId = null;
+        State.Player.PartnerName = null;
+        State.Player.RelationshipStatus = "Solteiro";
+        State.Player.RelationshipStartDay = -1;
+        State.Player.MarriageDay = -1;
+        foreach (var citizen in State.Citizens.Where(c => c.IsPlayerPartner))
+        {
+            citizen.IsPlayerPartner = false;
+            citizen.PlayerRelationshipStatus = "Ex";
+        }
         State.Player.Name = $"{oldName} — G{State.Player.Generation}";
         AddHistory("Sucessão", $"A partida continuou com a geração {State.Player.Generation}.",
             "falecimento do personagem → sucessão patrimonial");
@@ -555,6 +565,21 @@ public static class SimulationValidator
         if (state.Companies.Any(c => c.BrandAwareness is < 0m or > 1m || c.ProductQuality is < 0m or > 1m ||
                                      c.EmployeeMorale is < 0m or > 1m || c.PriceMultiplier <= 0m))
             throw new InvalidDataException("Indicadores empresariais inválidos.");
+
+        if (state.Citizens.Any(c =>
+                c.PlayerFamiliarity is < 0m or > 100m ||
+                c.PlayerAffinity is < 0m or > 100m ||
+                c.PlayerTrust is < 0m or > 100m))
+            throw new InvalidDataException("Indicadores de relacionamento fora do intervalo.");
+
+        if (state.Player.PartnerCitizenId is int partnerId)
+        {
+            var partner = state.Citizens.FirstOrDefault(c => c.Id == partnerId && c.Alive);
+            if (partner is null || !partner.IsPlayerPartner)
+                throw new InvalidDataException("Relacionamento do jogador aponta para parceiro inválido.");
+            if (state.Player.RelationshipStatus is not ("Namorando" or "Casado"))
+                throw new InvalidDataException("Estado romântico do jogador inconsistente.");
+        }
 
         var openCompanyIds = state.Companies.Where(c => c.Open).Select(c => c.Id).ToHashSet();
         foreach (var citizen in state.Citizens.Where(c => c.Alive && c.EmployedCompanyId is not null))
