@@ -8,6 +8,8 @@ var tests = new List<(string Name, Action Run)>
     ("simulação determinística", TestSimulationDeterminism),
     ("conservação monetária básica", TestMoneyConservation),
     ("ações jogáveis preservam invariantes", TestPlayableActions),
+    ("relógio horário e vida do jogador", TestHourlyLife),
+    ("branding, estratégia e finanças empresariais", TestDeepBusiness),
     ("save/load atômico", TestSaveRoundTrip),
     ("simulação longa sem invariantes quebradas", TestLongRun)
 };
@@ -108,6 +110,51 @@ static void TestPlayableActions()
     SimulationValidator.Validate(engine.State);
 }
 
+
+static void TestHourlyLife()
+{
+    var engine = new SimulationEngine(WorldGenerator.Generate(707, "Vida"));
+    var startDay = engine.State.CurrentDay;
+    var startHour = engine.State.CurrentHour;
+
+    engine.AdvanceHours(5);
+    Check(engine.State.CurrentHour == (startHour + 5) % 24, "relógio horário não avançou");
+    Check(engine.State.Player.CurrentActivity.Length > 0, "atividade do jogador não foi definida");
+
+    var remaining = 24 - engine.State.CurrentHour;
+    engine.AdvanceHours(remaining);
+    Check(engine.State.CurrentDay == startDay + 1, "virada de dia não ocorreu no relógio horário");
+    Check(engine.State.Player.Health is >= 0m and <= 100m, "saúde fora do intervalo");
+    Check(engine.State.Player.Stress is >= 0m and <= 100m, "estresse fora do intervalo");
+    Check(engine.State.Citizens.All(c => c.Energy is >= 0m and <= 100m), "energia de cidadão fora do intervalo");
+}
+
+static void TestDeepBusiness()
+{
+    var engine = new SimulationEngine(WorldGenerator.Generate(808, "Marca"));
+    engine.State.Player.Cash = 25_000m;
+
+    Check(engine.OpenPlayerBusiness(ContentCatalog.Sectors[0].Name), "empresa do jogador não abriu");
+    var company = engine.State.Companies.First(c => c.Id == engine.State.Player.BusinessCompanyId);
+
+    Check(engine.ConfigureBrand("Aurora", "Feito para durar."), "branding não foi aplicado");
+    Check(company.BrandName == "Aurora", "nome de marca não persistiu");
+    Check(engine.SetPricingStrategy("Premium"), "estratégia de preço falhou");
+    Check(company.PriceMultiplier > 1m, "preço premium não foi aplicado");
+    Check(engine.AdjustMarketingBudget(30m), "orçamento de marketing não foi alterado");
+
+    company.Cash += 10_000m;
+    Check(engine.InvestInQuality(1_500m), "investimento em qualidade falhou");
+    Check(engine.InvestInInnovation(1_500m), "investimento em inovação falhou");
+
+    engine.AdvanceDays(35);
+    Check(company.FinanceHistory.Count > 0, "histórico financeiro não foi gerado");
+    Check(company.BrandAwareness is >= 0m and <= 1m, "awareness inválido");
+    Check(company.ProductQuality is >= 0m and <= 1m, "qualidade inválida");
+    Check(company.MarketShare is >= 0m and <= 1m, "market share inválido");
+    SimulationValidator.Validate(engine.State);
+}
+
 static void TestSaveRoundTrip()
 {
     var engine = new SimulationEngine(WorldGenerator.Generate(123456, "Save"));
@@ -133,7 +180,10 @@ static void TestLongRun()
     Check(engine.State.Population > 0, "população zerou");
     Check(engine.State.Markets.All(m => m.Stock >= 0m && m.Price > 0m), "mercado inválido");
     Check(engine.State.Companies.Any(c => c.Open), "todas as empresas fecharam");
-    Console.WriteLine($"       5 anos simulados em {sw.Elapsed.TotalSeconds:N2}s; população {engine.State.Population:N0}; empresas {engine.State.OpenCompanies:N0}.");
+    Check(engine.State.OpenCompanies >= 60, $"ecossistema empresarial colapsou: {engine.State.OpenCompanies} empresas abertas");
+    Check(engine.State.UnemploymentRate < 0.80m, $"desemprego estrutural excessivo: {engine.State.UnemploymentRate:P1}");
+    Check(engine.State.Companies.Where(c => c.Open).All(c => c.BrandAwareness is >= 0m and <= 1m), "marca fora do intervalo");
+    Console.WriteLine($"       5 anos simulados em {sw.Elapsed.TotalSeconds:N2}s; população {engine.State.Population:N0}; empresas {engine.State.OpenCompanies:N0}; desemprego {engine.State.UnemploymentRate:P1}.");
 }
 
 static void Check(bool condition, string message)
