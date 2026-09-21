@@ -35,16 +35,16 @@ public partial class ExternalAssetLayer : Node3D
 
     private static readonly string[] CommercialBuildings =
     [
-        "res://assets/external/kenney/city/building-commercial-a.glb",
-        "res://assets/external/kenney/city/building-commercial-e.glb",
-        "res://assets/external/kenney/city/building-commercial-h.glb",
-        "res://assets/external/kenney/city/building-skyscraper-a.glb"
+        "res://assets/external/kenney/city/commercial/building-commercial-a.glb",
+        "res://assets/external/kenney/city/commercial/building-commercial-e.glb",
+        "res://assets/external/kenney/city/commercial/building-commercial-h.glb",
+        "res://assets/external/kenney/city/commercial/building-skyscraper-a.glb"
     ];
 
     private static readonly string[] IndustrialBuildings =
     [
-        "res://assets/external/kenney/city/building-industrial-c.glb",
-        "res://assets/external/kenney/city/building-industrial-m.glb"
+        "res://assets/external/kenney/city/industrial/building-industrial-c.glb",
+        "res://assets/external/kenney/city/industrial/building-industrial-m.glb"
     ];
 
     private static readonly string[] VehicleScenes =
