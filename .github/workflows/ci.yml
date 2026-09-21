@@ -1,4 +1,4 @@
-name: Windows V1.3
+name: Windows V1.4
 
 on:
   push:
@@ -17,7 +17,7 @@ concurrency:
 jobs:
   build-test-package:
     runs-on: windows-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
@@ -53,6 +53,15 @@ jobs:
           $templateTarget = Join-Path $env:APPDATA "Godot\export_templates\$version.stable.mono"
           New-Item -ItemType Directory -Force -Path $templateTarget | Out-Null
           Copy-Item ".toolcache/templates/templates/*" $templateTarget -Recurse -Force
+
+      - name: Fetch verified CC0 assets
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $log = & ./tools/fetch-third-party-assets.ps1 2>&1
+          $log | ForEach-Object { Write-Host $_ }
+          $joined = $log -join "`n"
+          if ($joined -notmatch "METROPOLE_ASSET_FETCH_OK") { throw "CC0 asset fetch success marker missing" }
 
       - name: Build Godot C# project
         shell: pwsh
@@ -136,13 +145,13 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer/Metropole.iss
-          if (!(Test-Path dist/Metropole-1.3.0-Setup.exe)) { throw "Installer not produced" }
+          if (!(Test-Path dist/Metropole-1.4.0-Setup.exe)) { throw "Installer not produced" }
 
       - name: Smoke install
         shell: pwsh
         run: |
           $target = Join-Path $env:LOCALAPPDATA "MetropoleCITest"
-          $proc = Start-Process -FilePath "$pwd/dist/Metropole-1.3.0-Setup.exe" -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$target" -Wait -PassThru
+          $proc = Start-Process -FilePath "$pwd/dist/Metropole-1.4.0-Setup.exe" -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$target" -Wait -PassThru
           if ($proc.ExitCode -ne 0) { throw "Installer failed with $($proc.ExitCode)" }
           if (!(Test-Path "$target/Metropole.exe")) { throw "Installed executable not found" }
           $game = Start-Process -FilePath "$target/Metropole.exe" -ArgumentList "--headless","--quit-after","120" -PassThru
@@ -153,14 +162,14 @@ jobs:
         shell: pwsh
         run: |
           Get-FileHash build/Metropole.exe -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  Metropole.exe" } | Set-Content dist/SHA256SUMS.txt
-          Get-FileHash dist/Metropole-1.3.0-Setup.exe -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  Metropole-1.3.0-Setup.exe" } | Add-Content dist/SHA256SUMS.txt
+          Get-FileHash dist/Metropole-1.4.0-Setup.exe -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  Metropole-1.4.0-Setup.exe" } | Add-Content dist/SHA256SUMS.txt
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Metropole-1.3.0-Windows
+          name: Metropole-1.4.0-Windows
           path: |
             build/**
-            dist/Metropole-1.3.0-Setup.exe
+            dist/Metropole-1.4.0-Setup.exe
             dist/SHA256SUMS.txt
           if-no-files-found: error
