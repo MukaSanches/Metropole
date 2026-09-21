@@ -175,7 +175,9 @@ public sealed partial class SimulationEngine
                 .ToArray();
 
             var citizenPayroll = employees.Sum(c => c.DailyWage);
-            var playerPayroll = State.Player.EmployerCompanyId == company.Id ? State.Player.DailyWage : 0m;
+            var playerPayroll = State.Player.EmployerCompanyId == company.Id
+                ? decimal.Round(State.Player.DailyWage * Math.Clamp(State.Player.WorkedHoursToday / 8m, 0m, 1m), 2)
+                : 0m;
             var payroll = citizenPayroll + playerPayroll;
             var district = CompanyDistrict(company);
             var baseOperations = decimal.Round((18m + employees.Length * 3.0m) * district.LogisticsIndex, 2);
@@ -204,7 +206,9 @@ public sealed partial class SimulationEngine
                     "caixa insuficiente → folha salarial incompatível → demissões", company.Id);
                 employees = State.Citizens.Where(c => c.Alive && c.EmployedCompanyId == company.Id).ToArray();
                 citizenPayroll = employees.Sum(c => c.DailyWage);
-                playerPayroll = State.Player.EmployerCompanyId == company.Id ? State.Player.DailyWage : 0m;
+                playerPayroll = State.Player.EmployerCompanyId == company.Id
+                ? decimal.Round(State.Player.DailyWage * Math.Clamp(State.Player.WorkedHoursToday / 8m, 0m, 1m), 2)
+                : 0m;
                 payroll = citizenPayroll + playerPayroll;
             }
 
@@ -216,12 +220,15 @@ public sealed partial class SimulationEngine
                 company.LastCosts += pay;
             }
 
-            if (State.Player.EmployerCompanyId == company.Id && company.Cash >= State.Player.DailyWage)
+            if (State.Player.EmployerCompanyId == company.Id && playerPayroll > 0m && company.Cash >= playerPayroll)
             {
-                company.Cash -= State.Player.DailyWage;
-                State.Player.Cash += State.Player.DailyWage;
-                company.LastCosts += State.Player.DailyWage;
+                company.Cash -= playerPayroll;
+                State.Player.Cash += playerPayroll;
+                company.LastCosts += playerPayroll;
+                State.Player.CareerExperienceDays++;
             }
+            if (State.Player.EmployerCompanyId == company.Id)
+                State.Player.WorkedHoursToday = 0m;
 
             var operationPaid = Math.Min(company.Cash, operations);
             company.Cash -= operationPaid;
