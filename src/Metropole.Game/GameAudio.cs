@@ -17,11 +17,14 @@ public partial class GameAudio : Node
     private AudioStream? _back;
 
     private bool _rainWanted;
+    private float _targetCityDb = -28f;
+    private float _targetRainDb = -80f;
     public int LoadedAssetCount { get; private set; }
 
     public override void _Ready()
     {
         Name = "GameAudio";
+        SetProcess(true);
 
         _click = Load("res://assets/external/kenney/audio/ui-click.wav");
         _hover = Load("res://assets/external/kenney/audio/ui-select.wav");
@@ -47,6 +50,21 @@ public partial class GameAudio : Node
             _city.Play();
     }
 
+    public override void _Process(double delta)
+    {
+        var t = 1f - MathF.Exp(-3.8f * (float)delta);
+
+        if (_city is not null)
+            _city.VolumeDb = Mathf.Lerp(_city.VolumeDb, _targetCityDb, t);
+
+        if (_rain is not null)
+        {
+            _rain.VolumeDb = Mathf.Lerp(_rain.VolumeDb, _targetRainDb, t);
+            if (!_rainWanted && _rain.Playing && _rain.VolumeDb < -58f)
+                _rain.Stop();
+        }
+    }
+
     public void PlayClick() => PlayUi(_click, -11f);
     public void PlayHover() => PlayUi(_hover, -22f);
     public void PlayConfirm() => PlayUi(_confirm, -9f);
@@ -59,22 +77,26 @@ public partial class GameAudio : Node
         if (_city is null || _rain is null) return;
 
         var night = state.CurrentHour is >= 22 or < 6;
-        _city.VolumeDb = night ? -34f : -27f;
+        var rush = state.CurrentHour is >= 7 and <= 9 or >= 16 and <= 19;
+        _targetCityDb = night ? -35f : rush ? -25.5f : -28f;
+        _city.PitchScale = night ? 0.97f : 1.0f;
 
         _rainWanted = state.Weather.Contains("Chuva", StringComparison.OrdinalIgnoreCase);
         if (_rainWanted)
         {
             if (!_rain.Playing && _rain.Stream is not null)
+            {
+                _rain.VolumeDb = -60f;
                 _rain.Play();
+            }
 
             var heavy = state.Weather.Contains("forte", StringComparison.OrdinalIgnoreCase);
-            _rain.VolumeDb = heavy ? -16f : -22f;
+            _targetRainDb = heavy ? -15f : -21f;
+            _rain.PitchScale = heavy ? 0.96f : 1.0f;
         }
         else
         {
-            _rain.VolumeDb = -80f;
-            if (_rain.Playing)
-                _rain.Stop();
+            _targetRainDb = -80f;
         }
     }
 
