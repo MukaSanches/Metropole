@@ -86,17 +86,31 @@ public sealed partial class SimulationEngine
         if (State.Player.Cash < startupCapital) return false;
 
         State.Player.Cash -= startupCapital;
+        var seedCredit = Math.Min(3_000m, State.Treasury);
+        State.Treasury -= seedCredit;
         var company = new CompanyState
         {
             Id = State.NextCompanyId++,
             Name = $"{State.Player.Name} — {sector.Name}",
+            BrandName = State.Player.Name.Length <= 24 ? State.Player.Name : State.Player.Name[..24],
+            Slogan = "Começando pequeno. Pensando grande.",
             Sector = sector.Name,
             ProductFamily = sector.ProductFamily,
             Archetype = "Microempresa do jogador",
+            Strategy = "Equilibrada",
+            OperatingStatus = "Ativa",
             DistrictId = State.Player.DistrictId,
-            Cash = startupCapital,
+            Cash = startupCapital + seedCredit,
+            Debt = seedCredit,
             BaseWage = 120m,
             Reputation = 0.45m,
+            BrandAwareness = 0.12m,
+            CustomerLoyalty = 0.16m,
+            ProductQuality = 0.55m,
+            Innovation = 0.38m,
+            EmployeeMorale = 0.65m,
+            PriceMultiplier = 1.00m,
+            MarketingBudgetDaily = 20m,
             Productivity = sector.Productivity,
             DesiredEmployees = 3,
             PlayerOwned = true
