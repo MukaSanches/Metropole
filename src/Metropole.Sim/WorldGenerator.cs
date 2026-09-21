@@ -53,7 +53,9 @@ public static class WorldGenerator
                 GridY = i / 3,
                 RentIndex = rng.NextDecimal(0.75m, 1.55m),
                 WealthIndex = rng.NextDecimal(0.70m, 1.60m),
-                LogisticsIndex = rng.NextDecimal(0.80m, 1.35m)
+                LogisticsIndex = rng.NextDecimal(0.80m, 1.35m),
+                SocialIndex = rng.NextDecimal(0.75m, 1.35m),
+                SafetyIndex = rng.NextDecimal(0.72m, 1.38m)
             });
         }
 
@@ -83,9 +85,19 @@ public static class WorldGenerator
                 Cash = rng.NextDecimal(30_000m, 220_000m),
                 BaseWage = rng.NextDecimal(95m, 230m),
                 Reputation = rng.NextDecimal(0.35m, 0.85m),
+                BrandAwareness = rng.NextDecimal(0.08m, 0.42m),
+                CustomerLoyalty = rng.NextDecimal(0.12m, 0.48m),
+                ProductQuality = rng.NextDecimal(0.38m, 0.78m),
+                Innovation = rng.NextDecimal(0.20m, 0.72m),
+                EmployeeMorale = rng.NextDecimal(0.48m, 0.78m),
+                PriceMultiplier = rng.NextDecimal(0.88m, 1.14m),
+                MarketingBudgetDaily = rng.NextDecimal(12m, 75m),
+                Strategy = StrategyFor(i),
                 Productivity = sector.Productivity * rng.NextDecimal(0.80m, 1.25m),
                 DesiredEmployees = rng.NextInt(4, 18)
             };
+            company.BrandName = company.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0];
+            company.Slogan = "Valor que move a cidade.";
             state.Companies.Add(company);
         }
 
@@ -101,7 +113,15 @@ public static class WorldGenerator
                 DistrictId = rng.NextInt(1, 10),
                 HouseholdId = rng.NextInt(1, 430),
                 SkillTier = rng.NextInt(1, 6),
-                Hunger = rng.NextDecimal(5m, 30m)
+                EducationLevel = ageYears < 6 ? 0 : ageYears < 18 ? 1 : rng.NextInt(1, 5),
+                Hunger = rng.NextDecimal(5m, 30m),
+                Energy = rng.NextDecimal(55m, 95m),
+                Happiness = rng.NextDecimal(42m, 78m),
+                Stress = rng.NextDecimal(8m, 45m),
+                Ambition = rng.NextDecimal(0.15m, 0.95m),
+                Sociability = rng.NextDecimal(0.15m, 0.95m),
+                Discipline = rng.NextDecimal(0.15m, 0.95m),
+                RiskTolerance = rng.NextDecimal(0.15m, 0.95m)
             });
         }
 
@@ -129,4 +149,14 @@ public static class WorldGenerator
         SimulationValidator.Validate(state);
         return state;
     }
+
+    private static string StrategyFor(int index) => (index % 6) switch
+    {
+        0 => "Equilibrada",
+        1 => "Penetração",
+        2 => "Premium",
+        3 => "Eficiência",
+        4 => "Crescimento",
+        _ => "Marca forte"
+    };
 }
