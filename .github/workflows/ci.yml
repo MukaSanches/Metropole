@@ -43,7 +43,11 @@ jobs:
           $manifest = "src/Metropole.Game/assets/external/SHA256SUMS.txt"
           if (!(Test-Path $manifest)) { throw "External asset manifest was not produced" }
           $required = @(
-            "src/Metropole.Game/assets/external/kenney/city/building-commercial-a.glb",
+            "src/Metropole.Game/assets/external/kenney/city/commercial/building-commercial-a.glb",
+            "src/Metropole.Game/assets/external/kenney/city/commercial/Textures/colormap.png",
+            "src/Metropole.Game/assets/external/kenney/city/industrial/Textures/colormap.png",
+            "src/Metropole.Game/assets/external/kenney/vehicles/Textures/colormap.png",
+            "src/Metropole.Game/assets/external/kenney/characters/Textures/colormap.png",
             "src/Metropole.Game/assets/external/kenney/vehicles/sedan.glb",
             "src/Metropole.Game/assets/external/kenney/characters/female-a.glb",
             "src/Metropole.Game/assets/external/kenney/audio/ui-click.wav",
