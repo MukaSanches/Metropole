@@ -377,11 +377,11 @@ public sealed partial class SimulationEngine
     {
         if (State.CurrentDay % 30 != 0) return;
 
-        var target = Math.Clamp(State.Population / 8, 110, 175);
+        var target = Math.Clamp(State.Population / 7, 145, 190);
         var missing = target - State.OpenCompanies;
         if (missing <= 0) return;
 
-        var creations = Math.Min(8, Math.Max(1, missing / 8));
+        var creations = Math.Min(12, Math.Max(2, missing / 6));
         for (var i = 0; i < creations; i++)
         {
             if (State.Treasury < 25_000m) break;
@@ -488,7 +488,7 @@ public sealed partial class SimulationEngine
     {
         if (State.Treasury < 100_000m) return;
 
-        var budget = Math.Min(55_000m, State.Treasury * 0.0009m);
+        var budget = Math.Min(90_000m, State.Treasury * 0.0015m);
         if (budget <= 0m) return;
 
         var markets = State.Markets.OrderBy(m => m.Family).ToArray();
