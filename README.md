@@ -1,46 +1,55 @@
 # METRÓPOLE ∞
 
-METRÓPOLE ∞ é um simulador sistêmico para Windows em que cidadãos, empresas, mercados e bairros continuam evoluindo sem depender do jogador.
+METRÓPOLE ∞ é um simulador sistêmico para Windows em que vida pessoal, trabalho, empresas, mercados, bairros e cidadãos evoluem continuamente.
 
-## Versão 1.1.0
+## Versão 1.2.0 — Vida & Empresas Profundas
 
-Esta versão transforma a primeira base técnica em uma experiência muito mais legível e jogável:
+A 1.2 amplia o jogo de um simulador econômico para uma simulação integrada de vida e negócios:
 
-- interface refeita com navegação, hierarquia visual e painéis compactos;
-- topbar corrigida: dinheiro, emprego, data e controles não ficam mais espremidos;
-- textos multilinha corrigidos;
-- mapa isométrico procedural redesenhado com edifícios volumétricos, vias, árvores, iluminação e tráfego animado;
-- identidade vetorial própria em SVG;
-- tela inicial refeita;
-- painel de cidade com mudança real de bairro e custo econômico;
-- carreira com trabalhar, descansar e pedir demissão;
-- mercado com compra em quantidades e leitura de oferta/demanda;
-- gestão de empresa com aportes e ajuste de vagas;
-- atalhos Ctrl+S e Esc;
-- janela mínima de 1280×720 para preservar a composição;
-- smoke test do executável exportado e do executável instalado.
+- relógio horário com rotina diária, trabalho, sono, estudo, lazer e deslocamento;
+- necessidades de energia, fome, saúde, estresse, felicidade, vida social e condicionamento;
+- educação, experiência profissional, reputação de carreira e relacionamentos;
+- cidadãos com personalidade, escolaridade, atividade atual, humor, estresse, parceiro e mobilidade profissional;
+- painel **Pessoas** para acompanhar vidas individuais e acontecimentos humanos;
+- branding empresarial com nome de marca, slogan, awareness e fidelidade;
+- estratégias de preço, orçamento de marketing, qualidade, inovação e reputação;
+- RH com salários, moral, vagas, produtividade e troca de empregos;
+- DRE diária com receita, folha, operação, aluguel, marketing, impostos e resultado;
+- histórico financeiro de 90 dias com gráfico;
+- market share, rival direto e intensidade de rivalidade;
+- IA concorrente que ajusta preço, marketing e estratégia;
+- demanda institucional para estabilizar a circulação monetária sem criar dinheiro;
+- recuperação do ecossistema empresarial quando a quantidade de empresas cai;
+- estados empresariais Ativa, Atenção, Crise e Encerrada;
+- ciclo visual dia/noite, clima, chuva, neblina, estrelas, luzes, tráfego e pedestres;
+- cidade procedural enriquecida sem depender de assets externos proprietários.
 
-O núcleo continua incluindo geração procedural determinística, população e empresas simuladas, preços dinâmicos, contratação/demissão, crédito, insolvência, demografia, sucessão familiar, save atômico e execução offline.
+## Referências de design
+
+A arquitetura da 1.2 foi pesquisada contra padrões de simuladores de vida, cidade e negócios como Software Inc., Big Ambitions, Capitalism Lab, Cities: Skylines II e The Sims 4. As mecânicas foram reinterpretadas para o METRÓPOLE, sem copiar código ou assets. Veja `docs/RESEARCH_V1.2.md`.
 
 ## Tecnologia
 
 - Godot Engine 4.7.2 stable .NET
 - C# / .NET 8
-- núcleo de simulação separado do motor gráfico
-- Inno Setup para o instalador Windows
+- Compatibility renderer
+- desenho procedural 2D via CanvasItem
+- núcleo de simulação separado da camada gráfica
+- Inno Setup para Windows
 - assets SVG próprios
 
-## Jogando
+## Loop de jogo
 
-1. Crie um mundo ou continue seu save.
-2. Abra **Carreira** e aceite uma vaga.
-3. Trabalhe para ganhar dinheiro e descanse para recuperar energia.
-4. Use **Mercado** para comprar alimentação e acompanhar a economia.
-5. Explore **Cidade** e mude de bairro quando fizer sentido.
-6. Acumule Cr$ 5.000 e abra sua empresa.
-7. Ajuste vagas, faça aportes e acompanhe o caixa.
-8. Acelere o tempo e observe a cidade evoluir.
-9. Use Ctrl+S para salvar.
+1. Crie ou continue um mundo.
+2. Use **Vida** para administrar tempo, saúde, estresse, estudo e socialização.
+3. Use **Carreira** para conseguir emprego e construir patrimônio.
+4. Acompanhe cidadãos reais em **Pessoas**.
+5. Leia oferta, demanda e preços em **Mercado**.
+6. Mude de bairro em **Cidade** conforme custo e qualidade de vida.
+7. Funde uma empresa com Cr$ 5.000.
+8. Defina marca, slogan, preço, marketing, salários, vagas, qualidade e P&D.
+9. Acompanhe DRE, caixa, dívida, market share e o rival direto.
+10. Acelere o relógio e observe cidadãos e empresas reagirem ao mesmo sistema.
 
 ## Build local
 
@@ -55,4 +64,4 @@ godot --headless --path src/Metropole.Game --export-release Windows build/Metrop
 
 ## Licenças
 
-O código deste repositório não concede licença de redistribuição por padrão. O jogo usa Godot Engine sob licença MIT. Consulte `THIRD_PARTY_NOTICES.md`.
+O jogo usa Godot Engine sob licença MIT. Consulte `THIRD_PARTY_NOTICES.md`.
