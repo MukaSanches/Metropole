@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.3.0 - 2026-09-21
+
+### Renderer adaptativo
+- cinco perfis gráficos: Automático, Ultra, Alto, Equilibrado e Leve;
+- controle automático de qualidade com base em FPS sustentado;
+- frequência de redraw ajustável sem alterar a simulação;
+- densidade escalável de pedestres, tráfego, chuva, árvores e empresas visíveis;
+- efeitos visuais reduzidos progressivamente antes de qualquer perda de mecânica;
+- indicador de FPS/perfil efetivo na interface;
+- nova tela Gráficos com orçamento visual explícito.
+
+### Cidade viva
+- sinais de marca e estado operacional nos prédios;
+- guindastes visuais para empresas em crescimento;
+- veículos de entrega em negócios de maior faturamento;
+- marcas visuais de estabelecimentos fechados;
+- pulsos econômicos por distrito;
+- mais feedback visual para empresa do jogador.
+
+### Compatibilidade e desempenho
+- simulação continua independente do FPS;
+- modo Automático começa em perfil equilibrado e sobe/desce conforme folga de desempenho;
+- perfil Leve reduz apenas representação visual;
+- validação percorre todos os perfis gráficos em 1280×720, 1600×900 e 1920×1080;
+- executável exportado continua sendo a unidade final de validação.
+
 ## 1.2.0 - 2026-09-21
 
 ### Vida
