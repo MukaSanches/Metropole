@@ -119,8 +119,7 @@ public sealed partial class SimulationEngine
     private void AgeAndNeeds(DeterministicRng rng)
     {
         State.Player.AgeDays++;
-        State.Player.Hunger = Clamp(State.Player.Hunger + 5m, 0m, 100m);
-        State.Player.Energy = Clamp(State.Player.Energy + 12m, 0m, 100m);
+        State.Player.Health = Clamp(State.Player.Health + (State.Player.Energy > 45m ? 0.05m : -0.10m), 0m, 100m);
 
         if (State.CurrentDay % 365 == 0 && State.Player.AgeYears is >= 25 and <= 50 && rng.Chance(0.10))
         {
@@ -129,11 +128,7 @@ public sealed partial class SimulationEngine
         }
 
         foreach (var citizen in State.Citizens.Where(c => c.Alive))
-        {
             citizen.AgeDays++;
-            if (citizen.DistrictId == State.Player.DistrictId || State.CurrentDay % 7 == 0)
-                citizen.Hunger = Clamp(citizen.Hunger + 4m, 0m, 100m);
-        }
 
         ProcessInstitutionalDemand(rng);
 
