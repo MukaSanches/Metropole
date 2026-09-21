@@ -65,9 +65,17 @@ jobs:
       - name: Run in-engine UI validation
         shell: pwsh
         run: |
-          $output = & "$env:GODOT_EXE" --headless --path src/Metropole.Game -- --validation-run 2>&1 | Tee-Object -Variable uiLog
-          $joined = $uiLog -join "`n"
-          if ($LASTEXITCODE -ne 0) { throw "Godot UI validation failed with exit code $LASTEXITCODE" }
+          $env:METROPOLE_UI_VALIDATION = "1"
+          $stdout = Join-Path $pwd "ui-validation.out"
+          $stderr = Join-Path $pwd "ui-validation.err"
+          $proc = Start-Process -FilePath "$env:GODOT_EXE" -ArgumentList "--headless","--path","src/Metropole.Game","--quit-after","1200" -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+          if (!$proc.WaitForExit(45000)) {
+            Stop-Process -Id $proc.Id -Force
+            throw "Godot UI validation timed out after 45 seconds"
+          }
+          $joined = ((Get-Content $stdout -Raw -ErrorAction SilentlyContinue) + "`n" + (Get-Content $stderr -Raw -ErrorAction SilentlyContinue))
+          Write-Host $joined
+          if ($proc.ExitCode -ne 0) { throw "Godot UI validation failed with exit code $($proc.ExitCode)" }
           if ($joined -notmatch "METROPOLE_UI_VALIDATION_OK") { throw "UI validation success marker was not produced" }
 
       - name: Export Windows
