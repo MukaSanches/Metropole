@@ -7,6 +7,7 @@ var tests = new List<(string Name, Action Run)>
     ("geração determinística", TestGenerationDeterminism),
     ("simulação determinística", TestSimulationDeterminism),
     ("conservação monetária básica", TestMoneyConservation),
+    ("ações jogáveis preservam invariantes", TestPlayableActions),
     ("save/load atômico", TestSaveRoundTrip),
     ("simulação longa sem invariantes quebradas", TestLongRun)
 };
@@ -75,6 +76,36 @@ static void TestMoneyConservation()
     var after = engine.State.TotalLiquidMoney();
     var delta = Math.Abs(before - after);
     Check(delta <= 0.02m, $"dinheiro líquido variou {delta:N4} no tick básico");
+}
+
+static void TestPlayableActions()
+{
+    var engine = new SimulationEngine(WorldGenerator.Generate(2026, "Jogador"));
+
+    var job = engine.GetJobBoard().First();
+    Check(engine.AcceptJob(job.Id), "não aceitou emprego válido");
+    Check(engine.LeaveJob(), "não saiu do emprego");
+    Check(engine.State.Player.EmployerCompanyId is null, "emprego não foi limpo");
+
+    var moneyBeforeFood = engine.State.TotalLiquidMoney();
+    var bought = engine.BuyFood(3);
+    Check(bought > 0, "não comprou alimentação");
+    Check(Math.Abs(engine.State.TotalLiquidMoney() - moneyBeforeFood) <= 0.02m, "compra de alimento criou/destruiu dinheiro");
+
+    var target = engine.State.Districts.First(d => d.Id != engine.State.Player.DistrictId);
+    var moneyBeforeMove = engine.State.TotalLiquidMoney();
+    Check(engine.MovePlayerDistrict(target.Id), "mudança válida falhou");
+    Check(engine.State.Player.DistrictId == target.Id, "bairro do jogador não mudou");
+    Check(Math.Abs(engine.State.TotalLiquidMoney() - moneyBeforeMove) <= 0.02m, "mudança criou/destruiu dinheiro");
+
+    engine.State.Player.Cash = Math.Max(engine.State.Player.Cash, 10_000m);
+    Check(engine.OpenPlayerBusiness(ContentCatalog.Sectors[0].Name), "abertura de empresa falhou");
+    var moneyBeforeInvestment = engine.State.TotalLiquidMoney();
+    Check(engine.InvestInPlayerBusiness(500m), "aporte falhou");
+    Check(Math.Abs(engine.State.TotalLiquidMoney() - moneyBeforeInvestment) <= 0.02m, "aporte criou/destruiu dinheiro");
+    Check(engine.AdjustPlayerBusinessHeadcount(1), "ajuste de quadro falhou");
+
+    SimulationValidator.Validate(engine.State);
 }
 
 static void TestSaveRoundTrip()
