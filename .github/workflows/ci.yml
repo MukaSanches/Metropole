@@ -1,4 +1,4 @@
-name: Windows V1.4
+name: Windows V1.5
 
 on:
   push:
@@ -48,7 +48,14 @@ jobs:
             "src/Metropole.Game/assets/external/kenney/characters/female-a.glb",
             "src/Metropole.Game/assets/external/kenney/audio/ui-click.wav",
             "src/Metropole.Game/assets/external/opengameart/audio/city-outdoor.ogg",
-            "src/Metropole.Game/assets/external/opengameart/audio/rain-loop.ogg"
+            "src/Metropole.Game/assets/external/opengameart/audio/rain-loop.ogg",
+            "src/Metropole.Game/assets/external/polyhaven/hdri/urban_street_02_1k.hdr",
+            "src/Metropole.Game/assets/external/polyhaven/textures/asphalt_02_diff_1k.jpg",
+            "src/Metropole.Game/assets/external/polyhaven/textures/asphalt_02_nor_gl_1k.jpg",
+            "src/Metropole.Game/assets/external/polyhaven/textures/asphalt_02_rough_1k.jpg",
+            "src/Metropole.Game/assets/external/polyhaven/textures/concrete_pavement_diff_1k.jpg",
+            "src/Metropole.Game/assets/external/polyhaven/textures/concrete_pavement_nor_gl_1k.jpg",
+            "src/Metropole.Game/assets/external/polyhaven/textures/concrete_pavement_rough_1k.jpg"
           )
           foreach ($file in $required) {
             if (!(Test-Path $file)) { throw "Required CC0 asset missing: $file" }
@@ -156,13 +163,13 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer/Metropole.iss
-          if (!(Test-Path dist/Metropole-1.4.0-Setup.exe)) { throw "Installer not produced" }
+          if (!(Test-Path dist/Metropole-1.5.0-Setup.exe)) { throw "Installer not produced" }
 
       - name: Smoke install
         shell: pwsh
         run: |
           $target = Join-Path $env:LOCALAPPDATA "MetropoleCITest"
-          $proc = Start-Process -FilePath "$pwd/dist/Metropole-1.4.0-Setup.exe" -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$target" -Wait -PassThru
+          $proc = Start-Process -FilePath "$pwd/dist/Metropole-1.5.0-Setup.exe" -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$target" -Wait -PassThru
           if ($proc.ExitCode -ne 0) { throw "Installer failed with $($proc.ExitCode)" }
           if (!(Test-Path "$target/Metropole.exe")) { throw "Installed executable not found" }
           $game = Start-Process -FilePath "$target/Metropole.exe" -ArgumentList "--headless","--quit-after","120" -PassThru
@@ -173,14 +180,14 @@ jobs:
         shell: pwsh
         run: |
           Get-FileHash build/Metropole.exe -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  Metropole.exe" } | Set-Content dist/SHA256SUMS.txt
-          Get-FileHash dist/Metropole-1.4.0-Setup.exe -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  Metropole-1.4.0-Setup.exe" } | Add-Content dist/SHA256SUMS.txt
+          Get-FileHash dist/Metropole-1.5.0-Setup.exe -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  Metropole-1.5.0-Setup.exe" } | Add-Content dist/SHA256SUMS.txt
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Metropole-1.4.0-Windows
+          name: Metropole-1.5.0-Windows
           path: |
             build/**
-            dist/Metropole-1.4.0-Setup.exe
+            dist/Metropole-1.5.0-Setup.exe
             dist/SHA256SUMS.txt
           if-no-files-found: error
