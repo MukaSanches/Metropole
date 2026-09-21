@@ -14,6 +14,7 @@ public partial class PremiumCityView : Control
     private WorldEnvironment? _worldEnvironment;
     private Godot.Environment? _environment;
     private CityWeatherOverlay? _weatherOverlay;
+    private ExternalAssetLayer? _externalAssets;
 
     private readonly List<(MultiMeshInstance3D Node, int FullCount)> _scalableGroups = [];
     private MultiMeshInstance3D? _vehicles;
@@ -37,7 +38,10 @@ public partial class PremiumCityView : Control
     private int _lastOpenCompanies = -1;
 
     public string Diagnostics =>
-        $"{GraphicsQuality.RenderingMethod}/{GraphicsQuality.RenderingDriver} • {QualityModeLabel} • 3D";
+        $"{GraphicsQuality.RenderingMethod}/{GraphicsQuality.RenderingDriver} • {QualityModeLabel} • 3D • assets {_externalAssets?.DetailedAssetCount ?? 0}";
+
+    public int DetailedAssetCount => _externalAssets?.DetailedAssetCount ?? 0;
+    public int AnimatedProxyCount => _externalAssets?.AnimatedProxyCount ?? 0;
 
     public string QualityModeLabel =>
         _manualQuality is VisualQuality fixedQuality
@@ -110,6 +114,8 @@ public partial class PremiumCityView : Control
             UpdateAtmosphere();
             UpdateVehicles();
             UpdatePedestrians();
+            if (_engine is not null)
+                _externalAssets?.Tick(_anim, _engine.State, _quality);
             _weatherOverlay?.SetAnimationTime(_anim);
         }
     }
@@ -231,12 +237,14 @@ public partial class PremiumCityView : Control
         _scalableGroups.Clear();
         _vehicles = null;
         _pedestrians = null;
+        _externalAssets = null;
 
         BuildGround();
         BuildRoadNetwork();
         BuildDistricts();
         BuildVehicles();
         BuildPedestrians();
+        BuildExternalAssets();
         _lastBuiltDay = _engine.State.CurrentDay;
         _lastOpenCompanies = _engine.State.OpenCompanies;
         UpdateAtmosphere();
@@ -453,6 +461,16 @@ public partial class PremiumCityView : Control
         _scalableGroups.Add((trunkNode, count));
     }
 
+    private void BuildExternalAssets()
+    {
+        if (_engine is null || _worldRoot is null) return;
+
+        _externalAssets = new ExternalAssetLayer { Name = "ExternalCC0Assets" };
+        _externalAssets.SetEngine(_engine);
+        _worldRoot.AddChild(_externalAssets);
+        _externalAssets.Build(_quality);
+    }
+
     private void BuildVehicles()
     {
         if (_worldRoot is null) return;
@@ -654,6 +672,8 @@ public partial class PremiumCityView : Control
 
         if (_sun is not null)
             _sun.ShadowEnabled = _quality >= VisualQuality.Medium;
+
+        _externalAssets?.ApplyQuality(_quality);
 
         if (_environment is not null && GraphicsQuality.RenderingMethod == "forward_plus")
         {
