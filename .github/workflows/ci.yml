@@ -66,13 +66,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Godot export failed: $LASTEXITCODE" }
           if (!(Test-Path build/Metropole.exe)) { throw "Metropole.exe not produced" }
 
-      - name: Smoke launch
+      - name: Smoke launch exported game
         shell: pwsh
         run: |
-          $p = Start-Process -FilePath "$pwd/build/Metropole.exe" -PassThru
-          Start-Sleep -Seconds 8
-          if ($p.HasExited -and $p.ExitCode -ne 0) { throw "Game exited with code $($p.ExitCode)" }
-          if (!$p.HasExited) { Stop-Process -Id $p.Id -Force }
+          & "$pwd/build/Metropole.exe" --headless --quit-after 120
+          if ($LASTEXITCODE -ne 0) { throw "Exported game smoke test failed with $LASTEXITCODE" }
 
       - name: Install Inno Setup
         shell: pwsh
@@ -92,10 +90,8 @@ jobs:
           $proc = Start-Process -FilePath "$pwd/dist/Metropole-1.0.0-Setup.exe" -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$target" -Wait -PassThru
           if ($proc.ExitCode -ne 0) { throw "Installer failed with $($proc.ExitCode)" }
           if (!(Test-Path "$target/Metropole.exe")) { throw "Installed executable not found" }
-          $game = Start-Process -FilePath "$target/Metropole.exe" -PassThru
-          Start-Sleep -Seconds 6
-          if ($game.HasExited -and $game.ExitCode -ne 0) { throw "Installed game exited with code $($game.ExitCode)" }
-          if (!$game.HasExited) { Stop-Process -Id $game.Id -Force }
+          & "$target/Metropole.exe" --headless --quit-after 120
+          if ($LASTEXITCODE -ne 0) { throw "Installed game smoke test failed with $LASTEXITCODE" }
 
       - name: Checksums
         shell: pwsh
