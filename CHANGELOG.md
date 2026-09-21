@@ -1,5 +1,47 @@
 # Changelog
 
+## 1.5.0 - 2026-09-21
+
+### Realismo 3D
+- HDRI urbano Poly Haven CC0;
+- asfalto PBR com albedo/normal/roughness;
+- pavimento PBR;
+- roughness dinâmica de piso em chuva;
+- SSR em Forward+ High/Ultra;
+- iluminação/reflexos diurnos baseados em HDRI;
+- noite continua usando atmosfera dinâmica própria.
+
+### Vida social
+- cidadãos 3D detalhados vinculados a cidadãos reais da simulação;
+- seleção/interação de pessoas;
+- familiaridade, afinidade, confiança e compatibilidade;
+- conhecer, conversar, sair, flertar;
+- namoro;
+- casamento;
+- tempo de qualidade;
+- planejamento familiar;
+- filhos entram na população;
+- término de relacionamento;
+- decay de relações sem contato;
+- vínculos persistidos no save.
+
+### Interface
+- topbar compactada;
+- navegação reduzida;
+- sidebar reduzida e rolável;
+- mapa com mínimo menor;
+- cards sociais interativos;
+- foco de câmera em pessoa selecionada;
+- validação automática contra clipping em 1280×720, 1366×768, 1600×900 e 1920×1080.
+
+### QA
+- teste determinístico do ciclo social completo;
+- validação de conservação monetária em ações sociais;
+- validação de casamento/família no executável exportado;
+- validação de cidadão 3D interativo;
+- assets Poly Haven obrigatórios no pipeline;
+- premium/fallback, instalação e smoke test continuam obrigatórios.
+
 ## 1.4.0 - 2026-09-21
 
 ### Assets
