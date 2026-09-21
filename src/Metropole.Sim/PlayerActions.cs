@@ -84,6 +84,14 @@ public static class PlayerActions
         state.Player.Cash -= cost;
         state.Treasury += cost;
         state.Player.DistrictId = district.Id;
+
+        if (state.Player.PartnerCitizenId is int partnerId)
+        {
+            var partner = state.Citizens.FirstOrDefault(c => c.Id == partnerId && c.Alive && c.IsPlayerPartner);
+            if (partner is not null)
+                partner.DistrictId = district.Id;
+        }
+
         state.History.Add(new HistoryEvent
         {
             Day = state.CurrentDay,
