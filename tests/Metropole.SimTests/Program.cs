@@ -181,7 +181,7 @@ static void TestLongRun()
     Check(engine.State.Markets.All(m => m.Stock >= 0m && m.Price > 0m), "mercado inválido");
     Check(engine.State.Companies.Any(c => c.Open), "todas as empresas fecharam");
     Check(engine.State.OpenCompanies >= 60, $"ecossistema empresarial colapsou: {engine.State.OpenCompanies} empresas abertas");
-    Check(engine.State.UnemploymentRate < 0.80m, $"desemprego estrutural excessivo: {engine.State.UnemploymentRate:P1}");
+    Check(engine.State.UnemploymentRate < 0.55m, $"desemprego estrutural excessivo: {engine.State.UnemploymentRate:P1}");
     Check(engine.State.Companies.Where(c => c.Open).All(c => c.BrandAwareness is >= 0m and <= 1m), "marca fora do intervalo");
     Console.WriteLine($"       5 anos simulados em {sw.Elapsed.TotalSeconds:N2}s; população {engine.State.Population:N0}; empresas {engine.State.OpenCompanies:N0}; desemprego {engine.State.UnemploymentRate:P1}.");
 }
