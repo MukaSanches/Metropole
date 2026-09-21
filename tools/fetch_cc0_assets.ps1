@@ -44,14 +44,17 @@ $characterBase = "https://raw.githubusercontent.com/AkiraNim/CLTCrossing/$charac
 $audioBase = "https://raw.githubusercontent.com/Calinou/kenney-interface-sounds/$audioCommit"
 
 $assets = @(
-    @("$cityBase/assets/kenney_city-kit-commercial_2.1/building-a.glb", "kenney\city\building-commercial-a.glb", 1000),
-    @("$cityBase/assets/kenney_city-kit-commercial_2.1/building-e.glb", "kenney\city\building-commercial-e.glb", 1000),
-    @("$cityBase/assets/kenney_city-kit-commercial_2.1/building-h.glb", "kenney\city\building-commercial-h.glb", 1000),
-    @("$cityBase/assets/kenney_city-kit-commercial_2.1/building-skyscraper-a.glb", "kenney\city\building-skyscraper-a.glb", 1000),
-    @("$cityBase/assets/kenney_city-kit-industrial_1.0/building-c.glb", "kenney\city\building-industrial-c.glb", 1000),
-    @("$cityBase/assets/kenney_city-kit-industrial_1.0/building-m.glb", "kenney\city\building-industrial-m.glb", 1000),
-    @("$cityBase/assets/kenney_city-kit-roads/road-straight.glb", "kenney\city\road-straight.glb", 1000),
-    @("$cityBase/assets/kenney_city-kit-roads/light-curved.glb", "kenney\city\light-curved.glb", 1000),
+    @("$cityBase/assets/kenney_city-kit-commercial_2.1/building-a.glb", "kenney\city\commercial\building-commercial-a.glb", 1000),
+    @("$cityBase/assets/kenney_city-kit-commercial_2.1/building-e.glb", "kenney\city\commercial\building-commercial-e.glb", 1000),
+    @("$cityBase/assets/kenney_city-kit-commercial_2.1/building-h.glb", "kenney\city\commercial\building-commercial-h.glb", 1000),
+    @("$cityBase/assets/kenney_city-kit-commercial_2.1/building-skyscraper-a.glb", "kenney\city\commercial\building-skyscraper-a.glb", 1000),
+    @("$cityBase/assets/kenney_city-kit-industrial_1.0/building-c.glb", "kenney\city\industrial\building-industrial-c.glb", 1000),
+    @("$cityBase/assets/kenney_city-kit-industrial_1.0/building-m.glb", "kenney\city\industrial\building-industrial-m.glb", 1000),
+    @("$cityBase/assets/kenney_city-kit-roads/road-straight.glb", "kenney\city\roads\road-straight.glb", 1000),
+    @("$cityBase/assets/kenney_city-kit-roads/light-curved.glb", "kenney\city\roads\light-curved.glb", 1000),
+    @("$cityBase/assets/kenney_city-kit-commercial_2.1/Textures/colormap.png", "kenney\city\commercial\Textures\colormap.png", 1000),
+    @("$cityBase/assets/kenney_city-kit-industrial_1.0/Textures/colormap.png", "kenney\city\industrial\Textures\colormap.png", 1000),
+    @("$cityBase/assets/kenney_city-kit-roads/Textures/colormap.png", "kenney\city\roads\Textures\colormap.png", 1000),
 
     @("$carBase/assets/models/kenney_car_kit/sedan.glb", "kenney\vehicles\sedan.glb", 1000),
     @("$carBase/assets/models/kenney_car_kit/taxi.glb", "kenney\vehicles\taxi.glb", 1000),
@@ -59,6 +62,7 @@ $assets = @(
     @("$carBase/assets/models/kenney_car_kit/van.glb", "kenney\vehicles\van.glb", 1000),
     @("$carBase/assets/models/kenney_car_kit/police.glb", "kenney\vehicles\police.glb", 1000),
     @("$carBase/assets/models/kenney_car_kit/firetruck.glb", "kenney\vehicles\firetruck.glb", 1000),
+    @("$carBase/assets/models/kenney_car_kit/Textures/colormap.png", "kenney\vehicles\Textures\colormap.png", 1000),
 
     @("$characterBase/CltCrossingv2/assets/kenney_mini-characters/character-female-a.glb", "kenney\characters\female-a.glb", 1000),
     @("$characterBase/CltCrossingv2/assets/kenney_mini-characters/character-female-b.glb", "kenney\characters\female-b.glb", 1000),
@@ -67,6 +71,7 @@ $assets = @(
     @("$characterBase/CltCrossingv2/assets/kenney_mini-characters/character-male-b.glb", "kenney\characters\male-b.glb", 1000),
     @("$characterBase/CltCrossingv2/assets/kenney_mini-characters/character-male-c.glb", "kenney\characters\male-c.glb", 1000),
     @("$characterBase/CltCrossingv2/assets/kenney_mini-characters/wheelchair.glb", "kenney\characters\wheelchair.glb", 1000),
+    @("$characterBase/CltCrossingv2/assets/kenney_mini-characters/Textures/colormap.png", "kenney\characters\Textures\colormap.png", 1000),
 
     @("$audioBase/addons/kenney_interface_sounds/click_001.wav", "kenney\audio\ui-click.wav", 1000),
     @("$audioBase/addons/kenney_interface_sounds/select_001.wav", "kenney\audio\ui-select.wav", 1000),
