@@ -1,98 +1,134 @@
 # METRÓPOLE ∞
 
-METRÓPOLE ∞ é um simulador sistêmico para Windows em que vida pessoal, trabalho, empresas, mercados, bairros e cidadãos evoluem continuamente.
+METRÓPOLE ∞ é um simulador sistêmico para Windows em que vida pessoal, relacionamentos, trabalho, empresas, mercados, bairros e cidadãos evoluem continuamente.
 
-## Versão 1.4.0 — Cidade, personagens, animação e áudio CC0
+## Versão 1.5.0 — Realismo & Vida Social
 
-A 1.4 preserva a arquitetura escalável da 1.3 e substitui parte importante da apresentação genérica por uma camada curada de assets gratuitos e publicáveis.
+A 1.5 foi construída para resolver duas limitações da 1.4: a cidade ainda precisava de materiais/iluminação mais convincentes e a vida social precisava virar gameplay real, não apenas estatística.
 
-### Assets 3D reais
+### Realismo 3D
 
-No renderer premium, a cidade agora combina a infraestrutura procedural/MultiMesh com modelos CC0:
+O renderer premium continua em Godot 4.7.2 Forward+ e agora adiciona:
 
-- edifícios comerciais Kenney;
-- edifícios industriais Kenney;
-- kit urbano/viário Kenney;
-- carros civis, táxi, van e entrega;
-- veículos de serviço;
-- personagens Mini Characters;
-- personagens com animações importadas diretamente dos GLB.
+- HDRI urbano CC0 da Poly Haven para iluminação/reflexos diurnos;
+- asfalto PBR CC0 com albedo, normal e roughness;
+- calçada/pavimento PBR CC0;
+- superfícies molhadas com roughness dinâmica durante chuva;
+- SSR em High/Ultra quando Forward+ estiver ativo;
+- SSAO, SSIL, glow e fog adaptativos;
+- sol, horário, clima e ambiente continuam reagindo à simulação;
+- assets detalhados Kenney continuam sobre uma base procedural/MultiMesh;
+- perfis automáticos reduzem custo gráfico antes de reduzir qualquer mecânica.
 
-A camada externa é adicional: o renderer procedural continua sendo a base de escala e o fallback de baixo custo.
+A Poly Haven publica HDRIs, texturas e modelos sob CC0. Consulte `docs/EXTERNAL_ASSETS_V1.5.md`.
 
-### Animação
+### Pessoas interativas
 
-- cidadãos detalhados recebem animação de caminhada importada quando disponível;
-- movimento no mundo continua vinculado ao relógio e à atividade urbana;
-- veículos detalhados percorrem a malha viária;
-- tráfego e população visual continuam escalando conforme o perfil gráfico;
-- animação visual nunca altera a verdade da simulação.
+Cidadãos 3D detalhados agora são vinculados a cidadãos reais da simulação. No renderer premium, clicar em um personagem seleciona aquela pessoa e abre sua ficha no painel Pessoas.
 
-### Áudio
+Cada relação com o jogador possui:
 
-A 1.4 adiciona uma primeira paisagem sonora real:
+- familiaridade;
+- afinidade;
+- confiança;
+- compatibilidade de personalidade;
+- histórico de interação;
+- estado do vínculo.
 
-- clique, hover, confirmação, erro, abrir e voltar;
-- ambiência urbana CC0;
-- chuva CC0 ligada ao clima real da simulação;
-- volume da cidade varia entre dia e noite;
-- chuva forte tem presença maior;
-- áudio é opcional para a simulação: falha sonora nunca corrompe economia/save.
+Fluxo jogável:
 
-### Licenciamento
+**desconhecido → conhecido → amizade → interesse → namoro → casamento → família**
 
-Os assets externos desta versão são CC0. O build baixa arquivos pinados/reprodutíveis e gera SHA-256 do pacote externo.
+Ações disponíveis incluem:
 
-Veja:
-- `docs/EXTERNAL_ASSETS_V1.4.md`
-- `THIRD_PARTY_NOTICES.md`
+- conhecer;
+- conversar;
+- sair juntos;
+- flertar;
+- pedir em namoro;
+- passar tempo com parceiro;
+- pedir em casamento;
+- planejar filho;
+- terminar relacionamento/casamento.
 
-### Desempenho
+Tempo e dinheiro usados nessas ações entram na mesma economia do resto do jogo.
 
-- Forward+ continua sendo o caminho premium;
-- Compatibility/CanvasItem continua sendo o fallback;
-- Low remove a camada detalhada externa;
-- Medium usa uma amostra pequena;
-- High/Ultra aumentam edifícios, veículos e personagens;
-- população lógica continua independente da quantidade de modelos renderizados;
-- MultiMesh continua responsável pela massa visual barata.
+### Relacionamentos persistentes
 
-### Validação
+- relações enfraquecem lentamente quando ignoradas;
+- namoro exige familiaridade, afinidade e confiança;
+- casamento exige tempo mínimo de namoro, vínculo forte e recursos;
+- casamento entra no histórico da cidade;
+- filhos entram como cidadãos reais da população;
+- sucessão encerra corretamente o vínculo romântico da geração anterior;
+- casamento e parceiro continuam persistidos no save.
 
-A release só passa se:
+### UI sem cortes
 
-1. núcleo C# compilar;
-2. testes da simulação passarem;
-3. assets CC0 pinados forem baixados e validados;
-4. Godot importar os GLB/WAV/OGG;
-5. o projeto C# do Godot compilar;
-6. o executável exportado abrir;
-7. UI e gameplay validarem;
-8. modo premium carregar modelos detalhados;
-9. pelo menos um personagem importar AnimationPlayer;
-10. os 8 assets de áudio obrigatórios carregarem;
-11. fallback leve continuar funcionando;
-12. instalador gerar, instalar e abrir.
+A composição foi reduzida e reorganizada para evitar clipping:
+
+- navegação mais estreita;
+- sidebar menor e rolável;
+- mapa pode reduzir até 400 px sem quebrar;
+- estatísticas do topo ficaram mais compactas;
+- painel inicial foi reduzido;
+- painéis críticos ganharam validação de bounds.
+
+O executável é testado automaticamente em:
+
+- 1280×720;
+- 1366×768;
+- 1600×900;
+- 1920×1080.
+
+A release falha se TopBar, navegação, mapa, sidebar ou barra de status saírem da área útil.
+
+### Performance
+
+A regra continua sendo: população lógica não é população renderizada.
+
+- cidadãos lógicos: C# determinístico;
+- massa visual: MultiMesh;
+- personagens próximos: GLB animado;
+- Low: remove camada detalhada;
+- Medium/High/Ultra: aumentam proxies;
+- renderer automático reduz qualidade quando o frame time sobe;
+- economia e relacionamentos não dependem de FPS.
 
 ## Tecnologia
 
 - Godot Engine 4.7.2 stable .NET
 - C# / .NET 8
 - Forward+ premium / Compatibility fallback
-- SubViewport + Camera3D ortográfica
-- MultiMesh para escala
-- GLB/glTF para assets detalhados
-- AnimationPlayer para clips importados
-- AudioStreamPlayer para UI/ambiente
-- núcleo determinístico separado da apresentação
+- Camera3D ortográfica em SubViewport
+- MultiMesh para densidade
+- GLB/glTF + AnimationPlayer
+- Poly Haven PBR/HDRI CC0
+- Kenney CC0
+- OpenGameArt CC0
 - Inno Setup para Windows
 
-## Engenharia Godot
+## Validação da release
 
-- `skills/godot-master/SKILL.md`
-- `docs/GODOT_VISUAL_MECHANICS_ROADMAP.md`
-- `docs/RESEARCH_V1.2.md`
-- `docs/EXTERNAL_ASSETS_V1.4.md`
+1. build do núcleo;
+2. testes de simulação;
+3. testes de amizade/namoro/casamento/família;
+4. matriz multi-seed de 5 anos;
+5. download/verificação dos assets CC0;
+6. build C# do Godot;
+7. importação de GLB/WAV/OGG/HDR/JPG;
+8. export Windows;
+9. validação do executável;
+10. validação social dentro do executável;
+11. validação de layout em quatro resoluções;
+12. validação de personagens 3D interativos;
+13. validação premium;
+14. validação fallback leve;
+15. smoke test;
+16. instalador;
+17. instalação silenciosa;
+18. execução pós-instalação;
+19. SHA-256.
 
 ## Build local
 
@@ -105,6 +141,9 @@ godot --headless --path src/Metropole.Game --editor --quit
 godot --headless --path src/Metropole.Game --export-release Windows build/Metropole.exe
 ~~~
 
-## Licenças
+## Engenharia e licenças
 
-Godot Engine usa MIT. Os assets externos da 1.4 são CC0; consulte `THIRD_PARTY_NOTICES.md`.
+- `skills/godot-master/SKILL.md`
+- `docs/GODOT_VISUAL_MECHANICS_ROADMAP.md`
+- `docs/EXTERNAL_ASSETS_V1.5.md`
+- `THIRD_PARTY_NOTICES.md`
