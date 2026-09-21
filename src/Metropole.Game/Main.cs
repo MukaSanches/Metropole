@@ -327,22 +327,14 @@ public partial class Main : Control
         _sidebar.AddChild(MakeSpacer(8));
         _sidebar.AddChild(MakeLabel("CATÁLOGO SISTÊMICO", 13, _muted));
         _sidebar.AddChild(MakeLabel(
-            $"{metrics.ProfessionArchetypes:N0} arquétipos profissionais
-" +
-            $"{metrics.CareerCombinations:N0}+ combinações de carreira
-" +
-            $"{metrics.BusinessArchetypes:N0} arquétipos empresariais
-" +
-            $"{metrics.Products:N0} produtos/serviços
-" +
-            $"{metrics.Resources:N0} recursos/componentes
-" +
-            $"{metrics.Buildings:N0} variações de edifícios
-" +
-            $"{metrics.Skills:N0} competências
-" +
-            $"{metrics.Events:N0} combinações de eventos
-" +
+            $"{metrics.ProfessionArchetypes:N0} arquétipos profissionais\\n" +
+            $"{metrics.CareerCombinations:N0}+ combinações de carreira\\n" +
+            $"{metrics.BusinessArchetypes:N0} arquétipos empresariais\\n" +
+            $"{metrics.Products:N0} produtos/serviços\\n" +
+            $"{metrics.Resources:N0} recursos/componentes\\n" +
+            $"{metrics.Buildings:N0} variações de edifícios\\n" +
+            $"{metrics.Skills:N0} competências\\n" +
+            $"{metrics.Events:N0} combinações de eventos\\n" +
             $"{metrics.Technologies:N0} tecnologias",
             14, Colors.White));
 
@@ -351,8 +343,7 @@ public partial class Main : Control
         {
             _sidebar.AddChild(MakeSpacer(8));
             _sidebar.AddChild(MakeLabel("ÚLTIMO EVENTO", 13, _muted));
-            _sidebar.AddChild(MakeLabel($"{latest.Summary}
-Causa: {latest.Cause}", 14, Colors.White));
+            _sidebar.AddChild(MakeLabel($"{latest.Summary}\\nCausa: {latest.Cause}", 14, Colors.White));
         }
     }
 
@@ -365,8 +356,7 @@ Causa: {latest.Cause}", 14, Colors.White));
         if (s.Player.EmployerCompanyId is int employerId)
         {
             var employer = s.Companies.FirstOrDefault(c => c.Id == employerId);
-            _sidebar.AddChild(MakeLabel($"Cargo atual em:
-{employer?.Name ?? "Empresa"}", 17, Colors.White));
+            _sidebar.AddChild(MakeLabel($"Cargo atual em:\\n{employer?.Name ?? "Empresa"}", 17, Colors.White));
             _sidebar.AddChild(MakeStat("Salário diário", $"Cr$ {s.Player.DailyWage:N2}"));
             var work = MakeButton("TRABALHAR +1 DIA", true);
             work.Pressed += () =>
@@ -381,8 +371,7 @@ Causa: {latest.Cause}", 14, Colors.White));
             _sidebar.AddChild(MakeLabel("Vagas disponíveis", 15, Colors.White));
             foreach (var company in _sim.GetJobBoard())
             {
-                var button = MakeButton($"{company.Sector} • {company.Name}
-Cr$ {company.BaseWage * 0.88m:N2}/dia", false);
+                var button = MakeButton($"{company.Sector} • {company.Name}\\nCr$ {company.BaseWage * 0.88m:N2}/dia", false);
                 button.Alignment = HorizontalAlignment.Left;
                 var id = company.Id;
                 button.Pressed += () =>
@@ -415,8 +404,7 @@ Cr$ {company.BaseWage * 0.88m:N2}/dia", false);
         foreach (var market in _sim.State.Markets.OrderByDescending(m => m.DailyDemand).Take(14))
         {
             _sidebar.AddChild(MakeLabel(
-                $"{market.Family}
-Cr$ {market.Price:N2} • estoque {market.Stock:N0} • demanda {market.DailyDemand:N1}",
+                $"{market.Family}\\nCr$ {market.Price:N2} • estoque {market.Stock:N0} • demanda {market.DailyDemand:N1}",
                 13, Colors.White));
         }
     }
@@ -461,8 +449,7 @@ Cr$ {market.Price:N2} • estoque {market.Stock:N0} • demanda {market.DailyDem
         _sidebar.AddChild(MakeSpacer(10));
         _sidebar.AddChild(MakeLabel("MAIORES EMPRESAS POR CAIXA", 13, _muted));
         foreach (var company in s.Companies.Where(c => c.Open).OrderByDescending(c => c.Cash).Take(8))
-            _sidebar.AddChild(MakeLabel($"{company.Name}
-{company.Sector} • Cr$ {company.Cash:N0}", 13, Colors.White));
+            _sidebar.AddChild(MakeLabel($"{company.Name}\\n{company.Sector} • Cr$ {company.Cash:N0}", 13, Colors.White));
     }
 
     private void BuildHistory()
@@ -473,9 +460,7 @@ Cr$ {market.Price:N2} • estoque {market.Stock:N0} • demanda {market.DailyDem
         foreach (var evt in _sim.State.History.AsEnumerable().Reverse().Take(35))
         {
             _sidebar.AddChild(MakeLabel(
-                $"D{evt.Day} • {evt.Kind}
-{evt.Summary}
-↳ {evt.Cause}",
+                $"D{evt.Day} • {evt.Kind}\\n{evt.Summary}\\n↳ {evt.Cause}",
                 13, evt.Kind == "Falência" ? _gold : Colors.White));
         }
     }
@@ -485,24 +470,12 @@ Cr$ {market.Price:N2} • estoque {market.Stock:N0} • demanda {market.DailyDem
         if (_sidebar is null) return;
         AddSidebarTitle("COMO JOGAR", "Os primeiros minutos já atravessam vários sistemas.");
         _sidebar.AddChild(MakeLabel(
-            "1. Vá em Carreira e aceite uma vaga.
-
-" +
-            "2. Trabalhe ou acelere o tempo para receber salário.
-
-" +
-            "3. Em Mercado, compre alimentação e observe preços/estoques.
-
-" +
-            "4. Acumule Cr$ 5.000 e abra uma empresa.
-
-" +
-            "5. Acompanhe contratações, demissões, crédito e falências no Histórico.
-
-" +
-            "6. Salve quando quiser. O jogo cria backup antes de substituir o save válido.
-
-" +
+            "1. Vá em Carreira e aceite uma vaga.\\n\\n" +
+            "2. Trabalhe ou acelere o tempo para receber salário.\\n\\n" +
+            "3. Em Mercado, compre alimentação e observe preços/estoques.\\n\\n" +
+            "4. Acumule Cr$ 5.000 e abra uma empresa.\\n\\n" +
+            "5. Acompanhe contratações, demissões, crédito e falências no Histórico.\\n\\n" +
+            "6. Salve quando quiser. O jogo cria backup antes de substituir o save válido.\\n\\n" +
             "7. Use a mesma seed para reproduzir as condições iniciais.",
             15, Colors.White));
     }
