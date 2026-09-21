@@ -15,6 +15,8 @@ public partial class PremiumCityView : Control
     private Godot.Environment? _environment;
     private CityWeatherOverlay? _weatherOverlay;
     private ExternalAssetLayer? _externalAssets;
+    private CityPolishLayer? _polishLayer;
+    private ShaderMaterial? _roadMaterial;
 
     private readonly List<(MultiMeshInstance3D Node, int FullCount)> _scalableGroups = [];
     private MultiMeshInstance3D? _vehicles;
@@ -30,18 +32,24 @@ public partial class PremiumCityView : Control
     private int _frameSamples;
     private double _upgradeWindow;
 
-    private Vector3 _cameraTarget = Vector3.Zero;
-    private float _cameraSize = 47f;
+    private Vector3 _cameraTargetDesired = Vector3.Zero;
+    private Vector3 _cameraTargetCurrent = Vector3.Zero;
+    private float _cameraSizeDesired = 47f;
+    private float _cameraSizeCurrent = 47f;
+    private float _cameraYawDesired = Mathf.DegToRad(45f);
+    private float _cameraYawCurrent = Mathf.DegToRad(45f);
     private bool _dragging;
     private Vector2 _lastMouse;
     private int _lastBuiltDay = -1;
     private int _lastOpenCompanies = -1;
 
     public string Diagnostics =>
-        $"{GraphicsQuality.RenderingMethod}/{GraphicsQuality.RenderingDriver} • {QualityModeLabel} • 3D • assets {_externalAssets?.DetailedAssetCount ?? 0}";
+        $"{GraphicsQuality.RenderingMethod}/{GraphicsQuality.RenderingDriver} • {QualityModeLabel} • 3D • assets {_externalAssets?.DetailedAssetCount ?? 0} • luzes {_polishLayer?.ActiveLocalLightCount ?? 0}";
 
     public int DetailedAssetCount => _externalAssets?.DetailedAssetCount ?? 0;
     public int AnimatedProxyCount => _externalAssets?.AnimatedProxyCount ?? 0;
+    public int StreetLightCount => _polishLayer?.StreetLightCount ?? 0;
+    public bool PolishReady => _roadMaterial is not null && _polishLayer?.Ready == true;
 
     public string QualityModeLabel =>
         _manualQuality is VisualQuality fixedQuality
@@ -63,6 +71,32 @@ public partial class PremiumCityView : Control
         _upgradeWindow = 0;
         ApplyQualityFeatures();
         RebuildWorld();
+    }
+
+    public void RotateCameraClockwise()
+    {
+        _cameraYawDesired += Mathf.Pi / 2f;
+    }
+
+    public void FocusOnPlayer()
+    {
+        if (_engine is null) return;
+        var state = _engine.State;
+        var districtId = state.Player.BusinessCompanyId is int companyId
+            ? state.Companies.FirstOrDefault(c => c.Id == companyId)?.DistrictId ?? state.Player.DistrictId
+            : state.Player.DistrictId;
+        var district = state.Districts.FirstOrDefault(d => d.Id == districtId);
+        if (district is null) return;
+
+        _cameraTargetDesired = DistrictPosition(district);
+        _cameraSizeDesired = 34f;
+    }
+
+    public void ResetCamera()
+    {
+        _cameraTargetDesired = Vector3.Zero;
+        _cameraSizeDesired = 47f;
+        _cameraYawDesired = Mathf.DegToRad(45f);
     }
 
     public void SetEngine(SimulationEngine engine)
@@ -107,6 +141,7 @@ public partial class PremiumCityView : Control
         _anim += delta;
         _visualAccumulator += delta;
         TrackAdaptiveQuality(delta);
+        UpdateCameraSmoothing(delta);
 
         if (_visualAccumulator >= 1.0 / 24.0)
         {
@@ -115,7 +150,10 @@ public partial class PremiumCityView : Control
             UpdateVehicles();
             UpdatePedestrians();
             if (_engine is not null)
+            {
                 _externalAssets?.Tick(_anim, _engine.State, _quality);
+                _polishLayer?.Update(_engine.State, _quality, _anim);
+            }
             _weatherOverlay?.SetAnimationTime(_anim);
         }
     }
@@ -126,14 +164,12 @@ public partial class PremiumCityView : Control
         {
             if (button.ButtonIndex == MouseButton.WheelUp && button.Pressed)
             {
-                _cameraSize = Math.Max(24f, _cameraSize - 3.2f);
-                ApplyCamera();
+                _cameraSizeDesired = Math.Max(22f, _cameraSizeDesired - 3.2f);
                 AcceptEvent();
             }
             else if (button.ButtonIndex == MouseButton.WheelDown && button.Pressed)
             {
-                _cameraSize = Math.Min(78f, _cameraSize + 3.2f);
-                ApplyCamera();
+                _cameraSizeDesired = Math.Min(82f, _cameraSizeDesired + 3.2f);
                 AcceptEvent();
             }
             else if (button.ButtonIndex is MouseButton.Middle or MouseButton.Right)
@@ -147,11 +183,10 @@ public partial class PremiumCityView : Control
         {
             var delta = motion.Position - _lastMouse;
             _lastMouse = motion.Position;
-            var scale = _cameraSize / 900f;
-            _cameraTarget += new Vector3(-delta.X * scale, 0, -delta.Y * scale);
-            _cameraTarget.X = Math.Clamp(_cameraTarget.X, -20f, 20f);
-            _cameraTarget.Z = Math.Clamp(_cameraTarget.Z, -20f, 20f);
-            ApplyCamera();
+            var scale = _cameraSizeDesired / 900f;
+            _cameraTargetDesired += new Vector3(-delta.X * scale, 0, -delta.Y * scale);
+            _cameraTargetDesired.X = Math.Clamp(_cameraTargetDesired.X, -22f, 22f);
+            _cameraTargetDesired.Z = Math.Clamp(_cameraTargetDesired.Z, -22f, 22f);
             AcceptEvent();
         }
     }
@@ -169,7 +204,11 @@ public partial class PremiumCityView : Control
         _viewport = new SubViewport
         {
             OwnWorld3D = true,
-            RenderTargetUpdateMode = SubViewport.UpdateMode.Always
+            RenderTargetUpdateMode = SubViewport.UpdateMode.Always,
+            Msaa3D = (Viewport.Msaa)1,
+            ScreenSpaceAA = (Viewport.ScreenSpaceAA)2,
+            UseTaa = true,
+            MeshLodThreshold = 1.0f
         };
         _viewportContainer.AddChild(_viewport);
 
@@ -183,7 +222,11 @@ public partial class PremiumCityView : Control
             AmbientLightSource = Godot.Environment.AmbientSource.Color,
             AmbientLightColor = new Color(0.44f, 0.55f, 0.62f),
             AmbientLightEnergy = 0.78f,
-            TonemapMode = Godot.Environment.ToneMapper.Agx
+            TonemapMode = Godot.Environment.ToneMapper.Agx,
+            AdjustmentEnabled = true,
+            AdjustmentBrightness = 1.0f,
+            AdjustmentContrast = 1.035f,
+            AdjustmentSaturation = 1.04f
         };
 
         _worldEnvironment = new WorldEnvironment
@@ -203,13 +246,13 @@ public partial class PremiumCityView : Control
         _camera = new Camera3D
         {
             Projection = Camera3D.ProjectionType.Orthogonal,
-            Size = _cameraSize,
+            Size = _cameraSizeCurrent,
             Near = 0.1f,
             Far = 250f,
             Current = true
         };
         _worldRoot.AddChild(_camera);
-        ApplyCamera();
+        SnapCamera();
 
         _weatherOverlay = new CityWeatherOverlay
         {
@@ -238,6 +281,8 @@ public partial class PremiumCityView : Control
         _vehicles = null;
         _pedestrians = null;
         _externalAssets = null;
+        _polishLayer = null;
+        _roadMaterial = null;
 
         BuildGround();
         BuildRoadNetwork();
@@ -245,6 +290,7 @@ public partial class PremiumCityView : Control
         BuildVehicles();
         BuildPedestrians();
         BuildExternalAssets();
+        BuildPolishLayer();
         _lastBuiltDay = _engine.State.CurrentDay;
         _lastOpenCompanies = _engine.State.OpenCompanies;
         UpdateAtmosphere();
@@ -277,11 +323,27 @@ public partial class PremiumCityView : Control
         var asphalt = new Color(0.055f, 0.065f, 0.075f);
         var sidewalk = new Color(0.18f, 0.20f, 0.21f);
 
+        var roadShader = GD.Load<Shader>("res://assets/shaders/road_surface.gdshader");
+        if (roadShader is not null)
+        {
+            _roadMaterial = new ShaderMaterial { Shader = roadShader };
+            _roadMaterial.SetShaderParameter("wetness", 0.0f);
+            _roadMaterial.SetShaderParameter("night_factor", 0.0f);
+        }
+
         for (var i = -2; i <= 2; i++)
         {
             var axis = i * 14f;
-            AddRoad(new Vector3(0, 0.02f, axis), new Vector3(70f, 0.20f, 2.4f), asphalt);
-            AddRoad(new Vector3(axis, 0.025f, 0), new Vector3(2.4f, 0.20f, 70f), asphalt);
+            if (_roadMaterial is not null)
+            {
+                AddRoad(new Vector3(0, 0.02f, axis), new Vector3(70f, 0.20f, 2.4f), _roadMaterial);
+                AddRoad(new Vector3(axis, 0.025f, 0), new Vector3(2.4f, 0.20f, 70f), _roadMaterial);
+            }
+            else
+            {
+                AddRoad(new Vector3(0, 0.02f, axis), new Vector3(70f, 0.20f, 2.4f), asphalt);
+                AddRoad(new Vector3(axis, 0.025f, 0), new Vector3(2.4f, 0.20f, 70f), asphalt);
+            }
 
             AddRoad(new Vector3(0, 0.08f, axis - 1.65f), new Vector3(70f, 0.12f, 0.48f), sidewalk);
             AddRoad(new Vector3(0, 0.08f, axis + 1.65f), new Vector3(70f, 0.12f, 0.48f), sidewalk);
@@ -304,6 +366,17 @@ public partial class PremiumCityView : Control
         var mesh = new MeshInstance3D
         {
             Mesh = CreateBoxMesh(size, color, 0.86f),
+            Position = position
+        };
+        _worldRoot.AddChild(mesh);
+    }
+
+    private void AddRoad(Vector3 position, Vector3 size, Material material)
+    {
+        if (_worldRoot is null) return;
+        var mesh = new MeshInstance3D
+        {
+            Mesh = new BoxMesh { Size = size, Material = material },
             Position = position
         };
         _worldRoot.AddChild(mesh);
@@ -471,6 +544,17 @@ public partial class PremiumCityView : Control
         _externalAssets.Build(_quality);
     }
 
+    private void BuildPolishLayer()
+    {
+        if (_engine is null || _worldRoot is null) return;
+
+        _polishLayer = new CityPolishLayer { Name = "CityPolish" };
+        _polishLayer.SetEngine(_engine);
+        _worldRoot.AddChild(_polishLayer);
+        _polishLayer.Build();
+        _polishLayer.ApplyQuality(_quality);
+    }
+
     private void BuildVehicles()
     {
         if (_worldRoot is null) return;
@@ -618,14 +702,29 @@ public partial class PremiumCityView : Control
         _sun.RotationDegrees = new Vector3(-38f - state.CurrentHour * 2.1f, -28f + state.CurrentHour * 4.0f, 0);
 
         _environment.FogEnabled = fog || rain;
-        _environment.FogDensity = fog ? 0.022f : rain ? 0.006f : 0.0f;
+        _environment.FogDensity = fog ? 0.020f : rain ? 0.0055f : 0.0f;
+        _environment.FogLightColor = storm
+            ? new Color(0.38f, 0.43f, 0.46f)
+            : new Color(0.62f, 0.68f, 0.72f);
+        _environment.FogSunScatter = fog ? 0.22f : rain ? 0.10f : 0.0f;
+
+        _environment.AdjustmentBrightness = storm ? 0.92f : 1.0f;
+        _environment.AdjustmentContrast = storm ? 1.06f : 1.035f;
+        _environment.AdjustmentSaturation = storm ? 0.86f : rain ? 0.93f : 1.04f;
+
+        _roadMaterial?.SetShaderParameter("wetness", storm ? 1.0f : rain ? 0.74f : fog ? 0.18f : 0.0f);
+        _roadMaterial?.SetShaderParameter("night_factor", 1.0f - daylight);
 
         if (GraphicsQuality.RenderingMethod == "forward_plus")
         {
             _environment.VolumetricFogEnabled = _quality >= VisualQuality.Ultra && (fog || storm);
+            _environment.VolumetricFogDensity = fog ? 0.020f : storm ? 0.008f : 0.0f;
+            _environment.VolumetricFogAnisotropy = 0.35f;
             _environment.SsaoEnabled = _quality >= VisualQuality.High;
             _environment.SsilEnabled = _quality >= VisualQuality.Ultra;
             _environment.GlowEnabled = _quality >= VisualQuality.High;
+            _environment.GlowIntensity = _quality >= VisualQuality.Ultra ? 0.72f : 0.46f;
+            _environment.GlowBloom = daylight < 0.35f ? 0.12f : 0.02f;
         }
 
         _weatherOverlay?.QueueRedraw();
@@ -674,6 +773,32 @@ public partial class PremiumCityView : Control
             _sun.ShadowEnabled = _quality >= VisualQuality.Medium;
 
         _externalAssets?.ApplyQuality(_quality);
+        _polishLayer?.ApplyQuality(_quality);
+
+        if (_viewport is not null)
+        {
+            _viewport.MeshLodThreshold = _quality switch
+            {
+                VisualQuality.Ultra => 0.75f,
+                VisualQuality.High => 1.0f,
+                VisualQuality.Medium => 1.45f,
+                _ => 2.25f
+            };
+            _viewport.Msaa3D = _quality switch
+            {
+                VisualQuality.Ultra => (Viewport.Msaa)2,
+                VisualQuality.High => (Viewport.Msaa)1,
+                VisualQuality.Medium => (Viewport.Msaa)1,
+                _ => (Viewport.Msaa)0
+            };
+            _viewport.ScreenSpaceAA = _quality switch
+            {
+                VisualQuality.Low => (Viewport.ScreenSpaceAA)1,
+                VisualQuality.Medium => (Viewport.ScreenSpaceAA)2,
+                _ => (Viewport.ScreenSpaceAA)0
+            };
+            _viewport.UseTaa = _quality >= VisualQuality.High;
+        }
 
         if (_environment is not null && GraphicsQuality.RenderingMethod == "forward_plus")
         {
@@ -685,13 +810,38 @@ public partial class PremiumCityView : Control
         }
     }
 
-    private void ApplyCamera()
+    private void UpdateCameraSmoothing(double delta)
     {
         if (_camera is null) return;
-        _camera.Size = _cameraSize;
-        var position = _cameraTarget + new Vector3(33f, 39f, 33f);
-        _camera.Position = position;
-        _camera.LookAt(_cameraTarget, Vector3.Up);
+
+        var blend = 1f - MathF.Exp(-7.5f * (float)delta);
+        _cameraTargetCurrent = _cameraTargetCurrent.Lerp(_cameraTargetDesired, blend);
+        _cameraSizeCurrent = Mathf.Lerp(_cameraSizeCurrent, _cameraSizeDesired, blend);
+        _cameraYawCurrent = Mathf.LerpAngle(_cameraYawCurrent, _cameraYawDesired, blend);
+        ApplyCameraCurrent();
+    }
+
+    private void SnapCamera()
+    {
+        _cameraTargetCurrent = _cameraTargetDesired;
+        _cameraSizeCurrent = _cameraSizeDesired;
+        _cameraYawCurrent = _cameraYawDesired;
+        ApplyCameraCurrent();
+    }
+
+    private void ApplyCameraCurrent()
+    {
+        if (_camera is null) return;
+
+        _camera.Size = _cameraSizeCurrent;
+        const float radius = 46.67f;
+        var offset = new Vector3(
+            MathF.Sin(_cameraYawCurrent) * radius,
+            39f,
+            MathF.Cos(_cameraYawCurrent) * radius);
+
+        _camera.Position = _cameraTargetCurrent + offset;
+        _camera.LookAt(_cameraTargetCurrent, Vector3.Up);
     }
 
     private static Mesh CreateBoxMesh(Vector3 size, Color color, float roughness)
