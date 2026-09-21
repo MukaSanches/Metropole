@@ -721,10 +721,18 @@ public partial class PremiumCityView : Control
             _environment.VolumetricFogDensity = fog ? 0.020f : storm ? 0.008f : 0.0f;
             _environment.VolumetricFogAnisotropy = 0.35f;
             _environment.SsaoEnabled = _quality >= VisualQuality.High;
+            _environment.SsaoIntensity = 1.25f;
+            _environment.SsaoRadius = 0.95f;
             _environment.SsilEnabled = _quality >= VisualQuality.Ultra;
+            _environment.SsilIntensity = 0.88f;
+            _environment.SsrEnabled = _quality >= VisualQuality.High && rain;
+            _environment.SsrMaxSteps = _quality >= VisualQuality.Ultra ? 48 : 28;
+            _environment.SsrFadeIn = 0.12f;
+            _environment.SsrFadeOut = 1.65f;
             _environment.GlowEnabled = _quality >= VisualQuality.High;
             _environment.GlowIntensity = _quality >= VisualQuality.Ultra ? 0.72f : 0.46f;
             _environment.GlowBloom = daylight < 0.35f ? 0.12f : 0.02f;
+            _environment.TonemapAgxContrast = storm ? 1.18f : daylight < 0.30f ? 1.16f : 1.24f;
         }
 
         _weatherOverlay?.QueueRedraw();
@@ -805,6 +813,8 @@ public partial class PremiumCityView : Control
             _environment.SsaoEnabled = _quality >= VisualQuality.High;
             _environment.SsilEnabled = _quality >= VisualQuality.Ultra;
             _environment.GlowEnabled = _quality >= VisualQuality.High;
+            if (_quality < VisualQuality.High)
+                _environment.SsrEnabled = false;
             if (_quality < VisualQuality.Ultra)
                 _environment.VolumetricFogEnabled = false;
         }
