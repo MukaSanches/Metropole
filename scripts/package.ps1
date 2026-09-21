@@ -29,7 +29,7 @@ New-Item -ItemType Directory -Force -Path $godotDir,$templateExtract | Out-Null
 Expand-Archive -Path $godotZip -DestinationPath $godotDir -Force
 Expand-Archive -Path $templatesZip -DestinationPath $templateExtract -Force
 
-$godot = Get-ChildItem $godotDir -Recurse -Filter "*mono_win64.exe" | Select-Object -First 1
+$godot = Get-ChildItem $godotDir -Recurse -Filter "*mono_win64_console.exe" | Select-Object -First 1
 if (!$godot) { throw "Executável Godot .NET não encontrado." }
 
 $templateTarget = Join-Path $env:APPDATA "Godot\export_templates\$GodotVersion.stable.mono"
