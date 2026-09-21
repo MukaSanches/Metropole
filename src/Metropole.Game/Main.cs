@@ -9,6 +9,7 @@ public partial class Main : Control
     private enum SidebarMode { Visao, Vida, Pessoas, Cidade, Carreira, Mercado, Empresas, Historico, Ajuda }
 
     private SimulationEngine? _sim;
+    private AudioDirector? _audio;
     private CityView? _cityView;
     private PremiumCityView? _premiumCityView;
     private Label? _graphicsBadge;
@@ -42,6 +43,7 @@ public partial class Main : Control
     {
         SetProcess(true);
         GetWindow().MinSize = new Vector2I(1280, 720);
+        EnsureAudioDirector();
 
         var validationRequested =
             OS.GetCmdlineUserArgs().Contains("--validation-run") ||
@@ -57,12 +59,24 @@ public partial class Main : Control
         ShowStartScreen();
     }
 
+    private void EnsureAudioDirector()
+    {
+        var root = GetTree().Root;
+        _audio = root.GetNodeOrNull<AudioDirector>("AudioDirector");
+        if (_audio is not null) return;
+
+        _audio = new AudioDirector { Name = "AudioDirector" };
+        root.AddChild(_audio);
+    }
+
     private void RunUiValidation()
     {
         try
         {
+            ThirdPartyAssetCatalog.ValidateOrThrow();
             _sim = new SimulationEngine(WorldGenerator.Generate(120260921, "Validação"));
             BuildGameScreen();
+            _audio?.SetSimulation(_sim);
 
             foreach (var mode in Enum.GetValues<SidebarMode>())
             {
@@ -102,7 +116,11 @@ public partial class Main : Control
                 RefreshAll();
             }
 
-            GD.Print($"METROPOLE_UI_VALIDATION_OK day={_sim.State.CurrentDay} hour={_sim.State.CurrentHour} companies={_sim.State.OpenCompanies} population={_sim.State.Population}");
+            if (_premiumCityView is not null)
+                _premiumCityView.ValidateLicensedAssetsOrThrow();
+
+            var assets = ThirdPartyAssetCatalog.Stats();
+            GD.Print($"METROPOLE_UI_VALIDATION_OK day={_sim.State.CurrentDay} hour={_sim.State.CurrentHour} companies={_sim.State.OpenCompanies} population={_sim.State.Population} cityAssets={assets.CityModels} vehicleAssets={assets.VehicleModels} characterAssets={assets.CharacterModels} uiAudio={assets.UiSounds} animated={_premiumCityView?.AnimatedCharacterInstances ?? 0}");
             GetTree().Quit(0);
         }
         catch (Exception ex)
@@ -143,6 +161,7 @@ public partial class Main : Control
 
     private void ShowStartScreen()
     {
+        _audio?.SetSimulation(null);
         _sim = null;
         _speed = 0;
         _tickAccumulator = 0;
@@ -260,13 +279,14 @@ public partial class Main : Control
             $"{metrics.ProfessionArchetypes:N0} profissões • {metrics.BusinessArchetypes:N0} negócios\n" +
             $"{metrics.Products:N0} produtos • {metrics.Events:N0} eventos combináveis",
             12, _muted));
-        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.3.0", 11, _muted2, false));
+        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.4.0", 11, _muted2, false));
     }
 
     private void BuildGameScreen()
     {
         if (_sim is null) return;
 
+        _audio?.SetSimulation(_sim);
         ClearNode(this);
         _nav.Clear();
         AddBackground();
@@ -1086,6 +1106,8 @@ public partial class Main : Control
             button.IconAlignment = HorizontalAlignment.Left;
         }
         ApplyButtonStyle(button, primary, false);
+        button.MouseEntered += () => _audio?.PlayHover();
+        button.Pressed += () => _audio?.PlayClick();
         return button;
     }
 
