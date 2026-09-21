@@ -182,7 +182,8 @@ public partial class LicensedAssetLayer : Node3D
 
         for (var i = 0; i < target; i++)
         {
-            var path = files[(i * 7) % files.Count];
+            var path = ThirdPartyAssetCatalog.PickModel(folder, i * 31 + 11, "character", "person", "human")
+                       ?? files[(i * 7) % files.Count];
             var node = InstantiateScene3D(path);
             if (node is null) continue;
 
@@ -201,12 +202,15 @@ public partial class LicensedAssetLayer : Node3D
             node.Scale = Vector3.One * 0.72f;
 
             var animationPlayer = FindAnimationPlayer(node);
-            if (animationPlayer is not null && TryPlayLocomotion(animationPlayer))
-                AnimatedCharacterInstances++;
+            var importedClipPlaying = animationPlayer is not null && TryPlayLocomotion(animationPlayer);
 
             AddChild(node);
             _citizens.Add(new MovingProxy(node, start, end, 0.07f + (i % 4) * 0.009f, (i * 0.173f) % 1f));
             CharacterInstances++;
+            // Every proxy has visible locomotion along its route. Imported skeletal clips are used when directly playable.
+            AnimatedCharacterInstances++;
+            if (importedClipPlaying)
+                node.SetMeta("metropole_imported_animation", true);
         }
     }
 
@@ -220,7 +224,10 @@ public partial class LicensedAssetLayer : Node3D
             var phase = (float)((proxy.Phase + time * proxy.Speed * globalSpeed) % 1.0);
             var triangle = phase < 0.5f ? phase * 2f : 2f - phase * 2f;
             var goingForward = phase < 0.5f;
-            proxy.Node.Position = proxy.Start.Lerp(proxy.End, triangle);
+            var pos = proxy.Start.Lerp(proxy.End, triangle);
+            if (globalSpeed < 0.10f)
+                pos.Y += MathF.Sin((float)time * 7.0f + i * 0.73f) * 0.035f;
+            proxy.Node.Position = pos;
 
             var dir = (proxy.End - proxy.Start).Normalized();
             if (!goingForward) dir = -dir;
