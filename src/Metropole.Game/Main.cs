@@ -370,48 +370,63 @@ public partial class Main : Control
 
     private Control BuildTopBar()
     {
-        var panel = MakePanel(_panel, 15);
+        var panel = MakePanel(_panel, 12);
         panel.Name = "TopBar";
-        panel.CustomMinimumSize = new Vector2(0, 78);
-        var bar = new HBoxContainer();
-        bar.AddThemeConstantOverride("separation", 10);
-        panel.AddChild(bar);
+        panel.CustomMinimumSize = new Vector2(0, 112);
 
-        var brand = new HBoxContainer { CustomMinimumSize = new Vector2(170, 0) };
-        brand.AddThemeConstantOverride("separation", 9);
-        brand.AddChild(MakeIcon("app_icon", 38));
+        var stack = new VBoxContainer();
+        stack.AddThemeConstantOverride("separation", 6);
+        panel.AddChild(stack);
+
+        var infoRow = new HBoxContainer();
+        infoRow.AddThemeConstantOverride("separation", 8);
+        stack.AddChild(infoRow);
+
+        var brand = new HBoxContainer { CustomMinimumSize = new Vector2(160, 0) };
+        brand.AddThemeConstantOverride("separation", 7);
+        brand.AddChild(MakeIcon("app_icon", 34));
         var bt = new VBoxContainer();
         bt.AddThemeConstantOverride("separation", 0);
-        bt.AddChild(MakeLabel("METRÓPOLE ∞", 19, _text, false));
-        bt.AddChild(MakeLabel("SOCIEDADE EM TEMPO REAL", 9, _muted2, false));
+        bt.AddChild(MakeLabel("METRÓPOLE ∞", 17, _text, false));
+        bt.AddChild(MakeLabel("SOCIEDADE VIVA", 8, _muted2, false));
         brand.AddChild(bt);
-        bar.AddChild(brand);
-        bar.AddChild(MakeVSeparator());
+        infoRow.AddChild(brand);
+        infoRow.AddChild(MakeVSeparator());
 
-        _dateLabel = MakeTopStat(bar, "DATA", 100);
-        _cashLabel = MakeTopStat(bar, "PATRIMÔNIO", 140, _gold);
-        _jobLabel = MakeTopStat(bar, "ATIVIDADE", 175);
+        _dateLabel = MakeTopStat(infoRow, "DATA", 92);
+        _cashLabel = MakeTopStat(infoRow, "PATRIMÔNIO", 132, _gold);
+        _jobLabel = MakeTopStat(infoRow, "ATIVIDADE", 160);
 
-        bar.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
+        infoRow.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
+
+        var compactSave = MakeButton("SALVAR", true);
+        compactSave.CustomMinimumSize = new Vector2(72, 34);
+        compactSave.Pressed += SaveGame;
+        infoRow.AddChild(compactSave);
+
+        var controlRow = new HBoxContainer();
+        controlRow.AddThemeConstantOverride("separation", 5);
+        stack.AddChild(controlRow);
+
+        controlRow.AddChild(MakeLabel("TEMPO", 9, _muted2, false));
 
         var controls = new HBoxContainer();
-        controls.AddThemeConstantOverride("separation", 4);
+        controls.AddThemeConstantOverride("separation", 3);
         controls.AddChild(MakeSpeedButton("Ⅱ", 0));
         controls.AddChild(MakeSpeedButton("1×", 1));
         controls.AddChild(MakeSpeedButton("2×", 2));
         controls.AddChild(MakeSpeedButton("4×", 4));
         controls.AddChild(MakeSpeedButton("8×", 8));
-        bar.AddChild(controls);
+        controlRow.AddChild(controls);
 
         var day = MakeButton("+1 DIA", false);
-        day.CustomMinimumSize = new Vector2(76, 40);
+        day.CustomMinimumSize = new Vector2(72, 34);
         day.Pressed += () => AdvanceOneDay(true);
-        bar.AddChild(day);
+        controlRow.AddChild(day);
 
-        var save = MakeButton("SALVAR", true);
-        save.CustomMinimumSize = new Vector2(80, 40);
-        save.Pressed += SaveGame;
-        bar.AddChild(save);
+        controlRow.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
+        controlRow.AddChild(MakeLabel("Ctrl+S salva • roda do mouse aproxima • clique em pessoas para interagir", 9, _muted2, false));
+
         return panel;
     }
 
