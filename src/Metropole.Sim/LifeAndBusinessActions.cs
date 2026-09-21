@@ -68,32 +68,8 @@ public static class LifeActions
         p.Happiness = Math.Clamp(p.Happiness + hours * 1.8m, 0m, 100m);
         p.Stress = Math.Clamp(p.Stress - hours * 1.6m, 0m, 100m);
 
-        if (p.RelationshipStatus == "Solteiro" && p.Social >= 72m)
-        {
-            var candidate = engine.State.Citizens
-                .Where(c => c.Alive
-                            && c.PartnerCitizenId is null
-                            && c.DistrictId == p.DistrictId
-                            && c.AgeYears is >= 20 and <= 50
-                            && c.Sociability >= 0.45m)
-                .OrderByDescending(c => c.Sociability + c.Happiness / 100m)
-                .ThenBy(c => c.Id)
-                .FirstOrDefault();
-
-            if (candidate is not null)
-            {
-                p.RelationshipStatus = "Relacionamento";
-                p.PartnerName = candidate.Name;
-                p.Happiness = Math.Clamp(p.Happiness + 8m, 0m, 100m);
-                engine.State.History.Add(new HistoryEvent
-                {
-                    Day = engine.State.CurrentDay,
-                    Kind = "Relacionamento",
-                    Summary = $"{p.Name} e {candidate.Name} começaram um relacionamento.",
-                    Cause = "vida social ativa + proximidade no bairro → novo vínculo"
-                });
-            }
-        }
+        // Socializar melhora a necessidade social, mas relações românticas só avançam
+        // por interações explícitas com um CitizenState real em SocialActions.
     }
 
     public static void Exercise(this SimulationEngine engine, int hours = 2)
