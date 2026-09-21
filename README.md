@@ -94,6 +94,8 @@ A 1.3 mantém os sistemas anteriores:
 - CanvasItem renderer 2D preservado
 - núcleo de simulação separado da camada gráfica
 - Inno Setup para Windows
+- pipeline de assets CC0 auditável em `tools/fetch-third-party-assets.ps1`
+- áudio dinâmico por buses UI / Weather / Ambience
 
 ## Engenharia Godot
 
