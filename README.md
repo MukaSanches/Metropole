@@ -2,96 +2,103 @@
 
 METRÓPOLE ∞ é um simulador sistêmico para Windows em que vida pessoal, trabalho, empresas, mercados, bairros e cidadãos evoluem continuamente.
 
-## Versão 1.4.0 — Cidade, personagens, animação e áudio CC0
+## Versão 1.5.0 — Premium Polish
 
-A 1.4 preserva a arquitetura escalável da 1.3 e substitui parte importante da apresentação genérica por uma camada curada de assets gratuitos e publicáveis.
+A 1.5 é uma versão de acabamento. O objetivo não é aumentar o número de sistemas por aumentar, mas elevar a apresentação 3D ao nível de uma produção comercial mantendo o fallback para computadores modestos.
 
-### Assets 3D reais
+### Render premium
 
-No renderer premium, a cidade agora combina a infraestrutura procedural/MultiMesh com modelos CC0:
+- Godot Forward+ como caminho de maior qualidade;
+- câmera ortográfica isométrica com movimento, zoom e rotação suavizados;
+- foco na atividade principal do jogador;
+- material PBR para asfalto com resposta à chuva;
+- iluminação urbana local com orçamento por perfil gráfico;
+- emissão noturna e acentos de distrito;
+- correção de cor e atmosfera dependentes do clima;
+- SSAO/SSIL/glow/volumetric fog somente onde o renderer e o perfil permitem;
+- LOD e antialiasing ajustados automaticamente à qualidade;
+- assets CC0 detalhados da 1.4 preservados.
 
-- edifícios comerciais Kenney;
-- edifícios industriais Kenney;
-- kit urbano/viário Kenney;
-- carros civis, táxi, van e entrega;
-- veículos de serviço;
-- personagens Mini Characters;
-- personagens com animações importadas diretamente dos GLB.
+### Cidadãos visuais ligados à simulação
 
-A camada externa é adicional: o renderer procedural continua sendo a base de escala e o fallback de baixo custo.
+Os personagens 3D não são mais apenas figurantes independentes.
 
-### Animação
-
-- cidadãos detalhados recebem animação de caminhada importada quando disponível;
-- movimento no mundo continua vinculado ao relógio e à atividade urbana;
-- veículos detalhados percorrem a malha viária;
-- tráfego e população visual continuam escalando conforme o perfil gráfico;
-- animação visual nunca altera a verdade da simulação.
+Cada proxy detalhado referencia um cidadão lógico real:
+- usa o bairro atual desse cidadão;
+- some das ruas quando está dormindo/em casa;
+- alterna movimento/idle conforme atividade;
+- animação reage à energia;
+- a simulação continua existindo mesmo quando o proxy visual é removido por desempenho.
 
 ### Áudio
 
-A 1.4 adiciona uma primeira paisagem sonora real:
+- UI CC0;
+- ambiência urbana;
+- chuva sincronizada com a meteorologia;
+- crossfade em vez de cortes secos;
+- intensidade muda por horário de pico, noite e chuva forte.
 
-- clique, hover, confirmação, erro, abrir e voltar;
-- ambiência urbana CC0;
-- chuva CC0 ligada ao clima real da simulação;
-- volume da cidade varia entre dia e noite;
-- chuva forte tem presença maior;
-- áudio é opcional para a simulação: falha sonora nunca corrompe economia/save.
+### Controles da cidade
 
-### Licenciamento
-
-Os assets externos desta versão são CC0. O build baixa arquivos pinados/reprodutíveis e gera SHA-256 do pacote externo.
-
-Veja:
-- `docs/EXTERNAL_ASSETS_V1.4.md`
-- `THIRD_PARTY_NOTICES.md`
+Na visão premium:
+- roda do mouse: zoom;
+- botão direito/meio + arrastar: pan;
+- **FOCAR**: centraliza bairro/empresa do jogador;
+- **GIRAR**: rotaciona a câmera 90°;
+- **RESET**: volta para a visão geral;
+- **GRÁFICOS**: Auto / Ultra / High / Medium / Low.
 
 ### Desempenho
 
-- Forward+ continua sendo o caminho premium;
-- Compatibility/CanvasItem continua sendo o fallback;
-- Low remove a camada detalhada externa;
-- Medium usa uma amostra pequena;
-- High/Ultra aumentam edifícios, veículos e personagens;
-- população lógica continua independente da quantidade de modelos renderizados;
-- MultiMesh continua responsável pela massa visual barata.
+A política da 1.5 permanece:
 
-### Validação
+**simular muito e renderizar apenas o necessário.**
 
-A release só passa se:
+- núcleo C# determinístico separado do rendering;
+- MultiMesh para massa urbana;
+- proxies 3D detalhados somente em quantidade limitada;
+- iluminação local sem sombras;
+- LOD mais agressivo em máquinas fracas;
+- modo Low elimina os efeitos mais caros;
+- Compatibility/CanvasItem continua como fallback.
 
-1. núcleo C# compilar;
-2. testes da simulação passarem;
-3. assets CC0 pinados forem baixados e validados;
-4. Godot importar os GLB/WAV/OGG;
-5. o projeto C# do Godot compilar;
-6. o executável exportado abrir;
-7. UI e gameplay validarem;
-8. modo premium carregar modelos detalhados;
-9. pelo menos um personagem importar AnimationPlayer;
-10. os 8 assets de áudio obrigatórios carregarem;
-11. fallback leve continuar funcionando;
-12. instalador gerar, instalar e abrir.
+### Validação da release
+
+A build Windows precisa passar por:
+1. build do núcleo;
+2. matriz de testes da simulação;
+3. aquisição/verificação dos assets CC0;
+4. build C# Godot;
+5. importação de GLB/WAV/OGG/shaders;
+6. exportação Windows;
+7. validação automática;
+8. validação premium forçada;
+9. validação do fallback leve;
+10. verificação de modelos, AnimationPlayer, áudio e camada 1.5;
+11. smoke test;
+12. instalador;
+13. instalação silenciosa;
+14. execução pós-instalação;
+15. SHA-256.
 
 ## Tecnologia
 
 - Godot Engine 4.7.2 stable .NET
 - C# / .NET 8
-- Forward+ premium / Compatibility fallback
-- SubViewport + Camera3D ortográfica
-- MultiMesh para escala
-- GLB/glTF para assets detalhados
-- AnimationPlayer para clips importados
-- AudioStreamPlayer para UI/ambiente
-- núcleo determinístico separado da apresentação
-- Inno Setup para Windows
+- Forward+ premium
+- Compatibility fallback
+- PBR StandardMaterial3D + ShaderMaterial
+- TAA/MSAA/SMAA/FXAA por perfil
+- MultiMesh
+- glTF/GLB
+- AnimationPlayer
+- AudioStreamPlayer
+- Inno Setup
 
-## Engenharia Godot
+## Engenharia
 
 - `skills/godot-master/SKILL.md`
 - `docs/GODOT_VISUAL_MECHANICS_ROADMAP.md`
-- `docs/RESEARCH_V1.2.md`
 - `docs/EXTERNAL_ASSETS_V1.4.md`
 
 ## Build local
@@ -107,4 +114,4 @@ godot --headless --path src/Metropole.Game --export-release Windows build/Metrop
 
 ## Licenças
 
-Godot Engine usa MIT. Os assets externos da 1.4 são CC0; consulte `THIRD_PARTY_NOTICES.md`.
+Godot Engine usa MIT. Os assets externos selecionados usam CC0; consulte `THIRD_PARTY_NOTICES.md`.
