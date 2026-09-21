@@ -62,12 +62,13 @@ public partial class Main : Control
         ShowStartScreen();
     }
 
-    private void RunUiValidation()
+    private async void RunUiValidation()
     {
         try
         {
             _sim = new SimulationEngine(WorldGenerator.Generate(120260921, "Validação"));
             BuildGameScreen();
+            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 
             foreach (var mode in Enum.GetValues<SidebarMode>())
             {
@@ -82,7 +83,7 @@ public partial class Main : Control
                 _sim.WorkShift(8);
             }
 
-            _sim.State.Player.Cash = Math.Max(_sim.State.Player.Cash, 25_000m);
+            _sim.State.Player.Cash = Math.Max(_sim.State.Player.Cash, 35_000m);
             if (_sim.State.Player.BusinessCompanyId is null)
                 _sim.OpenPlayerBusiness(ContentCatalog.Sectors[0].Name);
 
@@ -97,14 +98,47 @@ public partial class Main : Control
                 _sim.InvestInInnovation(1_500m);
             }
 
-            _sim.Socialize(3);
-            _sim.Study(4);
-            _sim.AdvanceHours(30);
-
-            foreach (var mode in Enum.GetValues<SidebarMode>())
+            var person = _sim.GetNearbyPeople(1).FirstOrDefault();
+            if (person is not null)
             {
-                _mode = mode;
-                RefreshAll();
+                person.CurrentActivity = "Lazer";
+                _sim.MeetPerson(person.Id);
+                person.PlayerFamiliarity = 80m;
+                person.PlayerAffinity = 86m;
+                person.PlayerTrust = 76m;
+                _sim.AskToDate(person.Id);
+                _sim.State.Player.RelationshipStartDay = _sim.State.CurrentDay - 35;
+                person.PlayerAffinity = 92m;
+                person.PlayerTrust = 86m;
+                _sim.ProposeMarriage();
+                _selectedCitizenId = person.Id;
+            }
+
+            _sim.Study(4);
+            _sim.AdvanceHours(8);
+
+            var resolutions = new[]
+            {
+                new Vector2I(1280, 720),
+                new Vector2I(1366, 768),
+                new Vector2I(1600, 900),
+                new Vector2I(1920, 1080)
+            };
+
+            foreach (var size in resolutions)
+            {
+                GetWindow().Size = size;
+                BuildGameScreen();
+                await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+                await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+
+                foreach (var mode in Enum.GetValues<SidebarMode>())
+                {
+                    _mode = mode;
+                    RefreshAll();
+                    await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+                    ValidateCriticalLayout(size);
+                }
             }
 
             if (_audio is null || _audio.LoadedAssetCount < 8)
@@ -116,9 +150,14 @@ public partial class Main : Control
                     throw new InvalidOperationException($"Camada CC0 3D não carregou assets suficientes: {_premiumCityView?.DetailedAssetCount ?? 0}.");
                 if (_premiumCityView.AnimatedProxyCount < 1)
                     throw new InvalidOperationException("Nenhum personagem CC0 com AnimationPlayer foi validado.");
+                if (_premiumCityView.InteractivePersonCount < 1)
+                    throw new InvalidOperationException("Nenhum cidadão 3D interativo foi validado.");
             }
 
-            GD.Print($"METROPOLE_UI_VALIDATION_OK day={_sim.State.CurrentDay} hour={_sim.State.CurrentHour} companies={_sim.State.OpenCompanies} population={_sim.State.Population} audio={_audio.LoadedAssetCount} detailed={_premiumCityView?.DetailedAssetCount ?? 0} animated={_premiumCityView?.AnimatedProxyCount ?? 0}");
+            if (_sim.State.Player.RelationshipStatus != "Casado")
+                throw new InvalidOperationException("Fluxo social de namoro/casamento não foi validado no executável.");
+
+            GD.Print($"METROPOLE_UI_VALIDATION_OK day={_sim.State.CurrentDay} hour={_sim.State.CurrentHour} companies={_sim.State.OpenCompanies} population={_sim.State.Population} social={_sim.State.Player.RelationshipStatus} audio={_audio.LoadedAssetCount} detailed={_premiumCityView?.DetailedAssetCount ?? 0} animated={_premiumCityView?.AnimatedProxyCount ?? 0} interactive={_premiumCityView?.InteractivePersonCount ?? 0}");
             GetTree().Quit(0);
         }
         catch (Exception ex)
@@ -126,6 +165,23 @@ public partial class Main : Control
             GD.PrintErr("METROPOLE_UI_VALIDATION_FAILED");
             GD.PrintErr(ex);
             GetTree().Quit(2);
+        }
+    }
+
+    private void ValidateCriticalLayout(Vector2I viewportSize)
+    {
+        foreach (var name in new[] { "TopBar", "NavigationPanel", "MapPanel", "SidebarPanel", "StatusBar" })
+        {
+            if (FindChild(name, true, false) is not Control control)
+                throw new InvalidOperationException($"Painel crítico ausente: {name}.");
+
+            var rect = control.GetGlobalRect();
+            if (rect.Position.X < -1f ||
+                rect.Position.Y < -1f ||
+                rect.End.X > viewportSize.X + 1f ||
+                rect.End.Y > viewportSize.Y + 1f)
+                throw new InvalidOperationException(
+                    $"Layout cortado em {viewportSize.X}x{viewportSize.Y}: {name}={rect}.");
         }
     }
 
