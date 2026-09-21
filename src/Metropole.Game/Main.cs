@@ -21,6 +21,7 @@ public partial class Main : Control
     private Label? _mapSubtitle;
     private readonly Dictionary<SidebarMode, Button> _nav = new();
     private SidebarMode _mode = SidebarMode.Visao;
+    private int? _selectedCitizenId;
     private double _speed;
     private double _tickAccumulator;
 
@@ -207,7 +208,7 @@ public partial class Main : Control
         heroBox.AddChild(MakeLabel("OFFLINE • SAVE LOCAL • ECONOMIA DETERMINÍSTICA", 11, _muted2, false));
 
         var setup = MakePanel(_panel, 22);
-        setup.CustomMinimumSize = new Vector2(455, 0);
+        setup.CustomMinimumSize = new Vector2(390, 0);
         setup.SizeFlagsVertical = SizeFlags.ExpandFill;
         row.AddChild(setup);
 
@@ -275,7 +276,7 @@ public partial class Main : Control
             $"{metrics.ProfessionArchetypes:N0} profissões • {metrics.BusinessArchetypes:N0} negócios\n" +
             $"{metrics.Products:N0} produtos • {metrics.Events:N0} eventos combináveis",
             12, _muted));
-        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.4.0 • CC0 ASSET & AUDIO EDITION", 11, _muted2, false));
+        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.5.0 • REALISM & SOCIAL LIFE", 11, _muted2, false));
     }
 
     private void BuildGameScreen()
@@ -314,12 +315,13 @@ public partial class Main : Control
     private Control BuildTopBar()
     {
         var panel = MakePanel(_panel, 15);
+        panel.Name = "TopBar";
         panel.CustomMinimumSize = new Vector2(0, 78);
         var bar = new HBoxContainer();
         bar.AddThemeConstantOverride("separation", 10);
         panel.AddChild(bar);
 
-        var brand = new HBoxContainer { CustomMinimumSize = new Vector2(205, 0) };
+        var brand = new HBoxContainer { CustomMinimumSize = new Vector2(170, 0) };
         brand.AddThemeConstantOverride("separation", 9);
         brand.AddChild(MakeIcon("app_icon", 38));
         var bt = new VBoxContainer();
@@ -330,9 +332,9 @@ public partial class Main : Control
         bar.AddChild(brand);
         bar.AddChild(MakeVSeparator());
 
-        _dateLabel = MakeTopStat(bar, "DATA", 125);
-        _cashLabel = MakeTopStat(bar, "PATRIMÔNIO", 170, _gold);
-        _jobLabel = MakeTopStat(bar, "ATIVIDADE", 235);
+        _dateLabel = MakeTopStat(bar, "DATA", 100);
+        _cashLabel = MakeTopStat(bar, "PATRIMÔNIO", 140, _gold);
+        _jobLabel = MakeTopStat(bar, "ATIVIDADE", 175);
 
         bar.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
 
@@ -360,7 +362,8 @@ public partial class Main : Control
     private Control BuildNavigation()
     {
         var panel = MakePanel(_panel, 15);
-        panel.CustomMinimumSize = new Vector2(210, 0);
+        panel.Name = "NavigationPanel";
+        panel.CustomMinimumSize = new Vector2(176, 0);
         panel.SizeFlagsVertical = SizeFlags.ExpandFill;
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 6);
@@ -397,6 +400,8 @@ public partial class Main : Control
     private Control BuildMapPanel()
     {
         var panel = MakePanel(_panel, 15);
+        panel.Name = "MapPanel";
+        panel.CustomMinimumSize = new Vector2(400, 0);
         panel.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         panel.SizeFlagsVertical = SizeFlags.ExpandFill;
 
@@ -432,9 +437,16 @@ public partial class Main : Control
             {
                 SizeFlagsHorizontal = SizeFlags.ExpandFill,
                 SizeFlagsVertical = SizeFlags.ExpandFill,
-                CustomMinimumSize = new Vector2(620, 480)
+                CustomMinimumSize = new Vector2(400, 360)
             };
             _premiumCityView.SetEngine(_sim!);
+            _premiumCityView.PersonSelected += citizenId =>
+            {
+                _selectedCitizenId = citizenId;
+                _mode = SidebarMode.Pessoas;
+                SetStatus("Pessoa selecionada na cidade. Use o painel Pessoas para interagir.");
+                RefreshAll();
+            };
             frame.AddChild(_premiumCityView);
         }
         else
@@ -485,7 +497,8 @@ public partial class Main : Control
     private Control BuildSidebar()
     {
         var panel = MakePanel(_panel, 15);
-        panel.CustomMinimumSize = new Vector2(360, 0);
+        panel.Name = "SidebarPanel";
+        panel.CustomMinimumSize = new Vector2(320, 0);
         panel.SizeFlagsVertical = SizeFlags.ExpandFill;
 
         var scroll = new ScrollContainer
@@ -504,6 +517,7 @@ public partial class Main : Control
     private Control BuildStatusBar()
     {
         var panel = MakePanel(new Color(0.035f, 0.070f, 0.095f), 9);
+        panel.Name = "StatusBar";
         panel.CustomMinimumSize = new Vector2(0, 34);
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 8);
@@ -1304,8 +1318,44 @@ public partial class Main : Control
         grid.AddChild(MakeMetricCard("RELAÇÃO", p.RelationshipStatus, _text));
         _sidebar.AddChild(grid);
 
-        if (!string.IsNullOrWhiteSpace(p.PartnerName))
-            _sidebar.AddChild(MakeInfoCard("RELACIONAMENTO", p.PartnerName!, $"{p.Children} filho(s) • vida social {p.Social:0}/100", _accent));
+        if (p.PartnerCitizenId is int partnerId)
+        {
+            var partner = s.Citizens.FirstOrDefault(c => c.Id == partnerId && c.Alive);
+            if (partner is not null)
+            {
+                _sidebar.AddChild(MakeInfoCard(
+                    p.RelationshipStatus.ToUpperInvariant(),
+                    partner.Name,
+                    $"afinidade {partner.PlayerAffinity:0}/100 • confiança {partner.PlayerTrust:0}/100 • {p.Children} filho(s)",
+                    _accent));
+
+                var partnerRow = new HBoxContainer();
+                partnerRow.AddThemeConstantOverride("separation", 6);
+
+                var together = MakeButton("TEMPO JUNTOS", true, "people");
+                together.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+                together.Pressed += () =>
+                {
+                    SetStatus(_sim.SpendTimeWithPartner()
+                        ? "Vocês passaram tempo de qualidade juntos."
+                        : "Não foi possível passar tempo juntos agora.");
+                    RefreshAll();
+                };
+                partnerRow.AddChild(together);
+
+                var openPartner = MakeButton("VER PESSOA", false, "people");
+                openPartner.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+                openPartner.Pressed += () =>
+                {
+                    _selectedCitizenId = partner.Id;
+                    _mode = SidebarMode.Pessoas;
+                    _premiumCityView?.FocusCitizen(partner.Id);
+                    RefreshAll();
+                };
+                partnerRow.AddChild(openPartner);
+                _sidebar.AddChild(partnerRow);
+            }
+        }
 
         _sidebar.AddChild(MakeSection("AÇÕES DE VIDA"));
 
@@ -1386,84 +1436,309 @@ public partial class Main : Control
         if (_sim is null || _sidebar is null) return;
         var s = _sim.State;
 
-        AddSidebarTitle("PESSOAS", "A cidade é feita de indivíduos com rotina, ambição e história.", "people");
+        AddSidebarTitle("PESSOAS", "Conheça cidadãos, crie vínculos e transforme relações em histórias.", "people");
 
         var alive = s.Citizens.Where(c => c.Alive).ToArray();
-        var working = alive.Count(c => c.CurrentActivity == "Trabalhando");
-        var studying = alive.Count(c => c.CurrentActivity == "Estudando");
-        var sleeping = alive.Count(c => c.CurrentActivity == "Dormindo");
-        var leisure = alive.Count(c => c.CurrentActivity == "Lazer");
+        var nearby = _sim.GetNearbyPeople(18).ToArray();
+        var known = alive.Count(c => c.PlayerFamiliarity > 0m);
+        var friends = alive.Count(c => c.PlayerRelationshipStatus is "Amigo" or "Amigo próximo");
+        var romantic = alive.Count(c => c.PlayerRelationshipStatus is "Interesse" or "Namorando" or "Cônjuge");
 
-        var grid = new GridContainer { Columns = 2 };
-        grid.AddThemeConstantOverride("h_separation", 7);
-        grid.AddThemeConstantOverride("v_separation", 7);
-        grid.AddChild(MakeMetricCard("TRABALHANDO", working.ToString("N0"), _accent));
-        grid.AddChild(MakeMetricCard("ESTUDANDO", studying.ToString("N0"), _gold));
-        grid.AddChild(MakeMetricCard("DORMINDO", sleeping.ToString("N0"), _muted));
-        grid.AddChild(MakeMetricCard("EM LAZER", leisure.ToString("N0"), _success));
-        _sidebar.AddChild(grid);
+        var overview = new GridContainer { Columns = 2 };
+        overview.AddThemeConstantOverride("h_separation", 7);
+        overview.AddThemeConstantOverride("v_separation", 7);
+        overview.AddChild(MakeMetricCard("PERTO DE VOCÊ", nearby.Length.ToString("N0"), _accent));
+        overview.AddChild(MakeMetricCard("CONHECIDOS", known.ToString("N0"), _text));
+        overview.AddChild(MakeMetricCard("AMIGOS", friends.ToString("N0"), _success));
+        overview.AddChild(MakeMetricCard("VÍNCULOS ROMÂNTICOS", romantic.ToString("N0"), _gold));
+        _sidebar.AddChild(overview);
 
-        var avgHappiness = alive.Length == 0 ? 0m : alive.Average(c => c.Happiness);
-        var avgStress = alive.Length == 0 ? 0m : alive.Average(c => c.Stress);
-        _sidebar.AddChild(MakeProgressStat("Felicidade média", avgHappiness, avgHappiness < 40 ? _danger : _success));
-        _sidebar.AddChild(MakeProgressStat("Estresse médio", avgStress, avgStress > 65 ? _danger : _gold));
+        CitizenState? selected = null;
+        if (_selectedCitizenId is int selectedId)
+            selected = alive.FirstOrDefault(c => c.Id == selectedId);
 
-        _sidebar.AddChild(MakeSection("VIDAS EM DESTAQUE"));
+        selected ??= s.Player.PartnerCitizenId is int partnerId
+            ? alive.FirstOrDefault(c => c.Id == partnerId)
+            : null;
 
-        var featured = alive
-            .OrderByDescending(c => PersonInterestScore(c, s.CurrentDay))
-            .Take(12)
-            .ToArray();
+        selected ??= nearby
+            .OrderByDescending(c => c.PlayerAffinity + c.PlayerTrust + c.PlayerFamiliarity)
+            .ThenBy(c => c.Id)
+            .FirstOrDefault();
 
-        foreach (var citizen in featured)
+        if (selected is not null)
         {
-            var employer = citizen.EmployedCompanyId is int companyId
-                ? s.Companies.FirstOrDefault(c => c.Id == companyId)
-                : null;
-            var partner = citizen.PartnerCitizenId is int partnerId
-                ? s.Citizens.FirstOrDefault(c => c.Id == partnerId)
-                : null;
-
-            var card = MakePanel(_panel2, 9);
-            var box = new VBoxContainer();
-            box.AddThemeConstantOverride("separation", 4);
-            card.AddChild(box);
-
-            var top = new HBoxContainer();
-            var name = MakeLabel(citizen.Name, 13, _text, true);
-            name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            top.AddChild(name);
-            top.AddChild(MakeBadge(citizen.CurrentActivity.ToUpperInvariant(), ActivityColor(citizen.CurrentActivity), _panel3));
-            box.AddChild(top);
-
-            box.AddChild(MakeLabel(
-                $"{citizen.AgeYears} anos • {EducationName(citizen.EducationLevel)} • {PersonalityName(citizen)}",
-                10, _muted));
-
-            var lifeLine = employer is null
-                ? "Sem emprego"
-                : $"{CompanyDisplayName(employer)} • Cr$ {citizen.DailyWage:N0}/dia";
-            if (partner is not null)
-                lifeLine += $" • parceiro(a): {partner.Name.Split(' ')[0]}";
-            box.AddChild(MakeLabel(lifeLine, 10, _muted));
-
-            var stats = new HBoxContainer();
-            var happy = MakeLabel($"☺ {citizen.Happiness:0}", 10, citizen.Happiness > 60 ? _success : _gold, false);
-            happy.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            stats.AddChild(happy);
-            stats.AddChild(MakeLabel($"estresse {citizen.Stress:0}", 10, citizen.Stress > 65 ? _danger : _muted, false));
-            stats.AddChild(MakeLabel($"Cr$ {citizen.Cash:N0}", 10, _text, false));
-            box.AddChild(stats);
-
-            _sidebar.AddChild(card);
+            _selectedCitizenId = selected.Id;
+            BuildSelectedPerson(selected);
         }
 
-        _sidebar.AddChild(MakeSection("ÚLTIMAS HISTÓRIAS HUMANAS"));
+        _sidebar.AddChild(MakeSection("PESSOAS NO SEU BAIRRO"));
+
+        if (nearby.Length == 0)
+        {
+            _sidebar.AddChild(MakeInfoCard(
+                "NINGUÉM DISPONÍVEL AGORA",
+                "A cidade tem rotina",
+                "Pessoas dormindo ou em outros bairros não aparecem como interação imediata. Avance o tempo ou mude de bairro.",
+                _muted));
+        }
+        else
+        {
+            foreach (var citizen in nearby.Take(12))
+            {
+                var employer = citizen.EmployedCompanyId is int companyId
+                    ? s.Companies.FirstOrDefault(c => c.Id == companyId)
+                    : null;
+
+                var card = MakePanel(citizen.Id == _selectedCitizenId ? _panel3 : _panel2, 9);
+                var box = new VBoxContainer();
+                box.AddThemeConstantOverride("separation", 4);
+                card.AddChild(box);
+
+                var top = new HBoxContainer();
+                var name = MakeLabel(citizen.Name, 13, _text, true);
+                name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+                top.AddChild(name);
+                top.AddChild(MakeBadge(
+                    citizen.PlayerFamiliarity <= 0m ? "DESCONHECIDO" : citizen.PlayerRelationshipStatus.ToUpperInvariant(),
+                    RelationshipColor(citizen),
+                    _panel));
+                box.AddChild(top);
+
+                box.AddChild(MakeLabel(
+                    $"{citizen.AgeYears} anos • {PersonalityName(citizen)} • {citizen.CurrentActivity}",
+                    10, _muted));
+
+                box.AddChild(MakeLabel(
+                    employer is null
+                        ? "Sem emprego"
+                        : $"{CompanyDisplayName(employer)} • Cr$ {citizen.DailyWage:N0}/dia",
+                    10, _muted2));
+
+                var row = new HBoxContainer();
+                row.AddThemeConstantOverride("separation", 6);
+
+                var select = MakeButton(citizen.PlayerFamiliarity <= 0m ? "CONHECER / DETALHES" : "INTERAGIR", citizen.Id == _selectedCitizenId, "people");
+                select.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+                var citizenId = citizen.Id;
+                select.Pressed += () =>
+                {
+                    _selectedCitizenId = citizenId;
+                    _premiumCityView?.FocusCitizen(citizenId);
+                    RefreshSidebar();
+                };
+                row.AddChild(select);
+
+                if (_premiumCityView is not null)
+                {
+                    var focus = MakeButton("FOCAR", false);
+                    focus.CustomMinimumSize = new Vector2(72, 36);
+                    focus.Pressed += () =>
+                    {
+                        if (_premiumCityView.FocusCitizen(citizenId))
+                            SetStatus($"{citizen.Name} destacado na cidade 3D.");
+                    };
+                    row.AddChild(focus);
+                }
+
+                box.AddChild(row);
+                _sidebar.AddChild(card);
+            }
+        }
+
+        _sidebar.AddChild(MakeSection("HISTÓRIAS HUMANAS"));
         foreach (var evt in s.History
-                     .Where(e => e.Kind is "Carreira" or "Relacionamento" or "Nascimento" or "Falecimento" or "Educação")
-                     .AsEnumerable().Reverse().Take(6))
+                     .Where(e => e.Kind is "Social" or "Relacionamento" or "Casamento" or "Família" or "Carreira" or "Nascimento" or "Falecimento" or "Educação")
+                     .AsEnumerable().Reverse().Take(8))
         {
             _sidebar.AddChild(MakeInfoCard($"DIA {evt.Day} • {evt.Kind.ToUpperInvariant()}", evt.Summary, evt.Cause, _muted));
+        }
+    }
+
+    private void BuildSelectedPerson(CitizenState citizen)
+    {
+        if (_sim is null || _sidebar is null) return;
+        var s = _sim.State;
+        var p = s.Player;
+        var employer = citizen.EmployedCompanyId is int companyId
+            ? s.Companies.FirstOrDefault(c => c.Id == companyId)
+            : null;
+        var compatibility = _sim.SocialCompatibility(citizen.Id);
+
+        _sidebar.AddChild(MakeSection("PESSOA SELECIONADA"));
+
+        var card = MakePanel(_panel3, 11);
+        var box = new VBoxContainer();
+        box.AddThemeConstantOverride("separation", 6);
+        card.AddChild(box);
+
+        var title = new HBoxContainer();
+        var name = MakeLabel(citizen.Name, 20, _text, true);
+        name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        title.AddChild(name);
+        title.AddChild(MakeBadge(citizen.CurrentActivity.ToUpperInvariant(), ActivityColor(citizen.CurrentActivity), _panel));
+        box.AddChild(title);
+
+        box.AddChild(MakeLabel(
+            $"{citizen.AgeYears} anos • {EducationName(citizen.EducationLevel)} • {PersonalityName(citizen)}",
+            10, _muted));
+        box.AddChild(MakeLabel(
+            employer is null ? "Sem emprego no momento." : $"Trabalha em {CompanyDisplayName(employer)} por Cr$ {citizen.DailyWage:N0}/dia.",
+            10, _muted));
+        box.AddChild(MakeLabel(
+            $"Compatibilidade com você: {compatibility:P0} • atividade: {citizen.CurrentActivity}",
+            10, compatibility >= 0.70m ? _success : compatibility >= 0.50m ? _gold : _muted));
+
+        if (citizen.PlayerFamiliarity > 0m)
+        {
+            box.AddChild(MakeProgressStat("Familiaridade", citizen.PlayerFamiliarity, _accent));
+            box.AddChild(MakeProgressStat("Afinidade", citizen.PlayerAffinity, citizen.PlayerAffinity >= 60m ? _success : _gold));
+            box.AddChild(MakeProgressStat("Confiança", citizen.PlayerTrust, citizen.PlayerTrust >= 60m ? _success : _muted));
+            box.AddChild(MakeLabel(_sim.RelationshipRequirements(citizen.Id), 10, _muted2));
+        }
+        else
+        {
+            box.AddChild(MakeLabel("Vocês ainda não se conhecem. Uma primeira conversa custa 1 hora.", 10, _muted));
+        }
+
+        _sidebar.AddChild(card);
+
+        var reachable = citizen.DistrictId == p.DistrictId && citizen.CurrentActivity != "Dormindo" && citizen.AgeYears >= 18;
+        if (!reachable)
+        {
+            _sidebar.AddChild(MakeInfoCard(
+                "INDISPONÍVEL AGORA",
+                "Vocês precisam estar no mesmo bairro",
+                "A pessoa também não pode estar dormindo. Use Cidade ou avance o tempo.",
+                _gold));
+            return;
+        }
+
+        _sidebar.AddChild(MakeSection("INTERAÇÕES"));
+
+        if (citizen.PlayerFamiliarity <= 0m)
+        {
+            var meet = MakeButton("CONHECER • 1H", true, "people");
+            meet.Pressed += () =>
+            {
+                SetStatus(_sim.MeetPerson(citizen.Id)
+                    ? $"Você conheceu {citizen.Name}."
+                    : "Não foi possível iniciar a conversa.");
+                RefreshAll();
+            };
+            _sidebar.AddChild(meet);
+            return;
+        }
+
+        var firstRow = new HBoxContainer();
+        firstRow.AddThemeConstantOverride("separation", 6);
+
+        var talk = MakeButton("CONVERSAR • 1H", true, "people");
+        talk.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        talk.Pressed += () =>
+        {
+            SetStatus(_sim.TalkToPerson(citizen.Id)
+                ? $"A conversa com {citizen.Name} aproximou vocês."
+                : "Não foi possível conversar agora.");
+            RefreshAll();
+        };
+        firstRow.AddChild(talk);
+
+        var hangout = MakeButton("SAIR • 3H / Cr$ 60", false);
+        hangout.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        hangout.Disabled = p.Cash < 60m || citizen.PlayerFamiliarity < 15m;
+        hangout.Pressed += () =>
+        {
+            SetStatus(_sim.HangOutWithPerson(citizen.Id)
+                ? $"Você passou algumas horas com {citizen.Name}."
+                : "Ainda não há proximidade ou dinheiro suficiente.");
+            RefreshAll();
+        };
+        firstRow.AddChild(hangout);
+        _sidebar.AddChild(firstRow);
+
+        var secondRow = new HBoxContainer();
+        secondRow.AddThemeConstantOverride("separation", 6);
+
+        var flirt = MakeButton("FLERTAR • 1H", false);
+        flirt.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        flirt.Disabled = citizen.PlayerFamiliarity < 28m || citizen.PlayerAffinity < 35m || citizen.PartnerCitizenId is not null;
+        flirt.Pressed += () =>
+        {
+            SetStatus(_sim.FlirtWithPerson(citizen.Id)
+                ? $"{citizen.Name} correspondeu ao flerte."
+                : "O flerte não avançou. Fortaleça afinidade e confiança.");
+            RefreshAll();
+        };
+        secondRow.AddChild(flirt);
+
+        if (p.PartnerCitizenId is null)
+        {
+            var date = MakeButton("PEDIR EM NAMORO", false);
+            date.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            date.Disabled = citizen.PlayerFamiliarity < 48m || citizen.PlayerAffinity < 62m || citizen.PlayerTrust < 36m;
+            date.Pressed += () =>
+            {
+                SetStatus(_sim.AskToDate(citizen.Id)
+                    ? $"Você e {citizen.Name} começaram a namorar."
+                    : "A relação ainda não tem base suficiente para namoro.");
+                RefreshAll();
+            };
+            secondRow.AddChild(date);
+        }
+
+        _sidebar.AddChild(secondRow);
+
+        if (p.PartnerCitizenId == citizen.Id)
+        {
+            _sidebar.AddChild(MakeSection("RELACIONAMENTO"));
+
+            var together = MakeButton("TEMPO DE QUALIDADE • 4H / Cr$ 80", true, "people");
+            together.Pressed += () =>
+            {
+                SetStatus(_sim.SpendTimeWithPartner()
+                    ? "O relacionamento ficou mais forte."
+                    : "Não foi possível passar tempo juntos.");
+                RefreshAll();
+            };
+            _sidebar.AddChild(together);
+
+            if (p.RelationshipStatus == "Namorando")
+            {
+                var days = Math.Max(0, s.CurrentDay - p.RelationshipStartDay);
+                var marry = MakeButton($"PEDIR EM CASAMENTO • {days} DIAS / Cr$ 1.500", false);
+                marry.Disabled = days < 30 || citizen.PlayerAffinity < 78m || citizen.PlayerTrust < 66m || p.Cash < 1500m;
+                marry.Pressed += () =>
+                {
+                    SetStatus(_sim.ProposeMarriage()
+                        ? $"Você e {citizen.Name} se casaram."
+                        : "Casamento exige 30 dias de namoro, afinidade 78, confiança 66 e Cr$ 1.500.");
+                    RefreshAll();
+                };
+                _sidebar.AddChild(marry);
+            }
+            else if (p.RelationshipStatus == "Casado")
+            {
+                var marriedDays = Math.Max(0, s.CurrentDay - p.MarriageDay);
+                var child = MakeButton($"PLANEJAR FILHO • {marriedDays} DIAS / Cr$ 2.500", false);
+                child.Disabled = marriedDays < 30 || citizen.PlayerAffinity < 72m || citizen.PlayerTrust < 70m || p.Cash < 2500m;
+                child.Pressed += () =>
+                {
+                    SetStatus(_sim.PlanChild()
+                        ? "A família cresceu e um novo cidadão entrou na simulação."
+                        : "Ainda faltam estabilidade, tempo de casamento ou recursos.");
+                    RefreshAll();
+                };
+                _sidebar.AddChild(child);
+            }
+
+            var breakup = MakeButton(p.RelationshipStatus == "Casado" ? "ENCERRAR CASAMENTO" : "TERMINAR RELACIONAMENTO", false);
+            breakup.Pressed += () =>
+            {
+                SetStatus(_sim.BreakUp() ? "Relacionamento encerrado." : "Não foi possível encerrar o relacionamento.");
+                RefreshAll();
+            };
+            _sidebar.AddChild(breakup);
         }
     }
 
@@ -1782,6 +2057,15 @@ public partial class Main : Control
         var activity = citizen.CurrentActivity is "Trabalhando" or "Estudando" ? 8m : 0m;
         var extremes = Math.Abs(citizen.Happiness - 50m) + Math.Abs(citizen.Stress - 50m);
         return extremes + activity + citizen.Ambition * 10m + ((citizen.Id * 17 + day) % 19);
+    }
+
+    private Color RelationshipColor(CitizenState citizen)
+    {
+        if (citizen.IsPlayerPartner && citizen.PlayerRelationshipStatus == "Cônjuge") return _gold;
+        if (citizen.IsPlayerPartner) return new Color(0.95f, 0.45f, 0.70f);
+        if (citizen.PlayerRelationshipStatus == "Interesse") return new Color(0.92f, 0.50f, 0.72f);
+        if (citizen.PlayerRelationshipStatus is "Amigo" or "Amigo próximo") return _success;
+        return citizen.PlayerFamiliarity > 0m ? _accent : _muted;
     }
 
     private Color ActivityColor(string activity) => activity switch
