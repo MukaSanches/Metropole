@@ -111,6 +111,7 @@ public sealed partial class SimulationEngine
         }
 
         ProcessRelationships(rng);
+        MaintainPlayerRelationships();
         ProcessCareerMobility(rng);
         UpdatePlayerWellbeing();
     }
@@ -156,6 +157,64 @@ public sealed partial class SimulationEngine
             AddHistory("Relacionamento", $"{a.Name} e {b.Name} começaram um relacionamento.",
                 "proximidade + compatibilidade de personalidade → vínculo social");
         }
+    }
+
+    private void MaintainPlayerRelationships()
+    {
+        var p = State.Player;
+
+        foreach (var citizen in State.Citizens.Where(c => c.Alive && c.PlayerFamiliarity > 0m))
+        {
+            var daysSince = State.CurrentDay - citizen.LastPlayerInteractionDay;
+            if (daysSince <= 7) continue;
+
+            var decay = citizen.IsPlayerPartner ? 0.10m : 0.20m;
+            citizen.PlayerAffinity = Clamp(citizen.PlayerAffinity - decay, 0m, 100m);
+            citizen.PlayerTrust = Clamp(citizen.PlayerTrust - decay * 0.45m, 0m, 100m);
+
+            if (!citizen.IsPlayerPartner)
+            {
+                if (citizen.PlayerAffinity < 42m && citizen.PlayerRelationshipStatus is "Amigo" or "Amigo próximo")
+                    citizen.PlayerRelationshipStatus = "Conhecido";
+                if (citizen.PlayerAffinity < 28m && citizen.PlayerRelationshipStatus == "Interesse")
+                    citizen.PlayerRelationshipStatus = "Conhecido";
+            }
+        }
+
+        if (p.PartnerCitizenId is not int partnerId) return;
+
+        var partner = State.Citizens.FirstOrDefault(c => c.Id == partnerId && c.Alive);
+        if (partner is null)
+        {
+            p.PartnerCitizenId = null;
+            p.PartnerName = null;
+            p.RelationshipStatus = "Solteiro";
+            p.RelationshipStartDay = -1;
+            p.MarriageDay = -1;
+            return;
+        }
+
+        partner.IsPlayerPartner = true;
+        p.PartnerName = partner.Name;
+
+        var daysApart = State.CurrentDay - partner.LastPlayerInteractionDay;
+        if (daysApart > 14)
+        {
+            partner.PlayerAffinity = Clamp(partner.PlayerAffinity - 0.35m, 0m, 100m);
+            partner.PlayerTrust = Clamp(partner.PlayerTrust - 0.20m, 0m, 100m);
+            p.Stress = Clamp(p.Stress + 0.18m, 0m, 100m);
+            p.Happiness = Clamp(p.Happiness - 0.15m, 0m, 100m);
+        }
+        else
+        {
+            p.Stress = Clamp(p.Stress - 0.08m, 0m, 100m);
+            p.Happiness = Clamp(p.Happiness + 0.08m, 0m, 100m);
+        }
+
+        if (p.RelationshipStatus == "Casado")
+            partner.PlayerRelationshipStatus = "Cônjuge";
+        else if (p.RelationshipStatus == "Namorando")
+            partner.PlayerRelationshipStatus = "Namorando";
     }
 
     private void ProcessCareerMobility(DeterministicRng rng)
