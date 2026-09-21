@@ -15,6 +15,9 @@ public partial class PremiumCityView : Control
     private Godot.Environment? _environment;
     private CityWeatherOverlay? _weatherOverlay;
     private ExternalAssetLayer? _externalAssets;
+    private StandardMaterial3D? _asphaltMaterial;
+    private StandardMaterial3D? _pavementMaterial;
+    private Sky? _realisticSky;
 
     private readonly List<(MultiMeshInstance3D Node, int FullCount)> _scalableGroups = [];
     private MultiMeshInstance3D? _vehicles;
@@ -176,15 +179,38 @@ public partial class PremiumCityView : Control
         _worldRoot = new Node3D { Name = "World3D" };
         _viewport.AddChild(_worldRoot);
 
+        var panorama = GD.Load<Texture2D>("res://assets/external/polyhaven/hdri/urban_street_02_1k.hdr");
+        if (panorama is not null)
+        {
+            _realisticSky = new Sky
+            {
+                SkyMaterial = new PanoramaSkyMaterial { Panorama = panorama }
+            };
+        }
+
         _environment = new Godot.Environment
         {
-            BackgroundMode = Godot.Environment.BGMode.Color,
+            BackgroundMode = _realisticSky is null ? Godot.Environment.BGMode.Color : Godot.Environment.BGMode.Sky,
             BackgroundColor = new Color(0.035f, 0.09f, 0.13f),
-            AmbientLightSource = Godot.Environment.AmbientSource.Color,
+            Sky = _realisticSky,
+            AmbientLightSource = _realisticSky is null ? Godot.Environment.AmbientSource.Color : Godot.Environment.AmbientSource.Sky,
             AmbientLightColor = new Color(0.44f, 0.55f, 0.62f),
             AmbientLightEnergy = 0.78f,
+            ReflectedLightSource = _realisticSky is null ? Godot.Environment.ReflectionSource.Disabled : Godot.Environment.ReflectionSource.Sky,
             TonemapMode = Godot.Environment.ToneMapper.Agx
         };
+
+        _asphaltMaterial = CreatePbrMaterial(
+            "res://assets/external/polyhaven/textures/asphalt_02_diff_1k.jpg",
+            "res://assets/external/polyhaven/textures/asphalt_02_nor_gl_1k.jpg",
+            "res://assets/external/polyhaven/textures/asphalt_02_rough_1k.jpg",
+            new Color(0.78f, 0.80f, 0.82f), 0.88f);
+
+        _pavementMaterial = CreatePbrMaterial(
+            "res://assets/external/polyhaven/textures/concrete_pavement_diff_1k.jpg",
+            "res://assets/external/polyhaven/textures/concrete_pavement_nor_gl_1k.jpg",
+            "res://assets/external/polyhaven/textures/concrete_pavement_rough_1k.jpg",
+            new Color(0.90f, 0.90f, 0.90f), 0.84f);
 
         _worldEnvironment = new WorldEnvironment
         {
@@ -255,9 +281,11 @@ public partial class PremiumCityView : Control
     {
         if (_worldRoot is null) return;
 
+        var floorMesh = new BoxMesh { Size = new Vector3(74f, 0.35f, 74f) };
+        floorMesh.Material = _pavementMaterial ?? CreateVertexColorMaterial(0.94f, 0.0f);
         var floor = new MeshInstance3D
         {
-            Mesh = CreateBoxMesh(new Vector3(74f, 0.35f, 74f), new Color(0.045f, 0.105f, 0.105f), 0.94f)
+            Mesh = floorMesh
         };
         floor.Position = new Vector3(0, -0.35f, 0);
         _worldRoot.AddChild(floor);
@@ -301,9 +329,16 @@ public partial class PremiumCityView : Control
     private void AddRoad(Vector3 position, Vector3 size, Color color)
     {
         if (_worldRoot is null) return;
+
+        var box = new BoxMesh { Size = size };
+        var isAsphalt = size.Y >= 0.18f && (size.X > 5f || size.Z > 5f);
+        box.Material = isAsphalt
+            ? _asphaltMaterial ?? CreateVertexColorMaterial(0.86f, 0.0f)
+            : _pavementMaterial ?? CreateBoxMesh(Vector3.One, color, 0.86f).Material;
+
         var mesh = new MeshInstance3D
         {
-            Mesh = CreateBoxMesh(size, color, 0.86f),
+            Mesh = box,
             Position = position
         };
         _worldRoot.AddChild(mesh);
@@ -610,8 +645,19 @@ public partial class PremiumCityView : Control
                 : new Color(0.18f, 0.39f, 0.53f);
 
         _environment.BackgroundColor = skyNight.Lerp(skyDay, daylight);
+        _environment.BackgroundMode = daylight > 0.34f && _realisticSky is not null
+            ? Godot.Environment.BGMode.Sky
+            : Godot.Environment.BGMode.Color;
+        _environment.AmbientLightSource = daylight > 0.34f && _realisticSky is not null
+            ? Godot.Environment.AmbientSource.Sky
+            : Godot.Environment.AmbientSource.Color;
         _environment.AmbientLightColor = new Color(0.25f, 0.32f, 0.42f).Lerp(new Color(0.72f, 0.77f, 0.78f), daylight);
         _environment.AmbientLightEnergy = 0.38f + daylight * (storm ? 0.34f : 0.62f);
+
+        if (_asphaltMaterial is not null)
+            _asphaltMaterial.Roughness = rain ? 0.38f : 0.86f;
+        if (_pavementMaterial is not null)
+            _pavementMaterial.Roughness = rain ? 0.52f : 0.84f;
 
         _sun.LightEnergy = 0.18f + daylight * (storm ? 0.65f : 1.42f);
         _sun.LightColor = new Color(0.50f, 0.60f, 0.82f).Lerp(new Color(1.0f, 0.89f, 0.72f), daylight);
@@ -626,6 +672,7 @@ public partial class PremiumCityView : Control
             _environment.SsaoEnabled = _quality >= VisualQuality.High;
             _environment.SsilEnabled = _quality >= VisualQuality.Ultra;
             _environment.GlowEnabled = _quality >= VisualQuality.High;
+            _environment.SsrEnabled = _quality >= VisualQuality.High;
         }
 
         _weatherOverlay?.QueueRedraw();
@@ -680,6 +727,7 @@ public partial class PremiumCityView : Control
             _environment.SsaoEnabled = _quality >= VisualQuality.High;
             _environment.SsilEnabled = _quality >= VisualQuality.Ultra;
             _environment.GlowEnabled = _quality >= VisualQuality.High;
+            _environment.SsrEnabled = _quality >= VisualQuality.High;
             if (_quality < VisualQuality.Ultra)
                 _environment.VolumetricFogEnabled = false;
         }
@@ -692,6 +740,38 @@ public partial class PremiumCityView : Control
         var position = _cameraTarget + new Vector3(33f, 39f, 33f);
         _camera.Position = position;
         _camera.LookAt(_cameraTarget, Vector3.Up);
+    }
+
+    private static StandardMaterial3D CreatePbrMaterial(
+        string albedoPath,
+        string normalPath,
+        string roughnessPath,
+        Color tint,
+        float roughness)
+    {
+        var material = new StandardMaterial3D
+        {
+            AlbedoColor = tint,
+            Roughness = roughness,
+            Metallic = 0.0f
+        };
+
+        var albedo = GD.Load<Texture2D>(albedoPath);
+        var normal = GD.Load<Texture2D>(normalPath);
+        var rough = GD.Load<Texture2D>(roughnessPath);
+
+        if (albedo is not null)
+            material.AlbedoTexture = albedo;
+        if (normal is not null)
+        {
+            material.NormalEnabled = true;
+            material.NormalTexture = normal;
+            material.NormalScale = 0.65f;
+        }
+        if (rough is not null)
+            material.RoughnessTexture = rough;
+
+        return material;
     }
 
     private static Mesh CreateBoxMesh(Vector3 size, Color color, float roughness)
