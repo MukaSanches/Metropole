@@ -28,3 +28,22 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 See https://godotengine.org/license/
+
+
+## METRÓPOLE ∞ 1.4 — CC0 game assets
+
+The 1.4 Windows build may include the following public-domain/CC0 assets, fetched by `tools/fetch-third-party-assets.ps1` during CI:
+
+- Kenney City Kit (Commercial) 2.1 — CC0 1.0 — https://opengameart.org/content/city-kit-commercial
+- Kenney City Kit (Industrial) 2.0 — CC0 1.0 — https://opengameart.org/content/city-kit-industrial
+- Kenney City Kit (Suburban) 2.0 — CC0 1.0 — https://opengameart.org/content/city-kit-suburban
+- Kenney City Kit (Roads) — CC0 1.0 — https://opengameart.org/content/city-kit-roads
+- Kenney Car Kit 3.1 — CC0 1.0 — https://opengameart.org/content/car-kit
+- Kenney Mini Characters — CC0 1.0 — https://opengameart.org/node/165679
+- Kenney Interface Sounds — CC0 1.0 — https://opengameart.org/content/interface-sounds
+- Rain (loopable), Ylmir — CC0 — https://opengameart.org/content/rain-loopable
+- Crowd Shouting/Speaking Ambience, StarNinjas — CC0 — https://opengameart.org/content/crowd-shoutingspeaking-ambience
+
+CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/
+
+Attribution is not required by CC0, but source information is retained for provenance and auditability.
