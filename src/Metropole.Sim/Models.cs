@@ -55,6 +55,10 @@ public sealed class PlayerState
     public decimal Happiness { get; set; } = 64m;
     public decimal Social { get; set; } = 58m;
     public decimal Fitness { get; set; } = 45m;
+    public decimal Ambition { get; set; } = 0.62m;
+    public decimal Sociability { get; set; } = 0.58m;
+    public decimal Discipline { get; set; } = 0.60m;
+    public decimal RiskTolerance { get; set; } = 0.48m;
     public decimal CareerReputation { get; set; } = 0.35m;
     public decimal EducationProgress { get; set; }
     public int EducationLevel { get; set; } = 2;
