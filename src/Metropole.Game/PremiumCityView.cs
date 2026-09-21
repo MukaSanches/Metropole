@@ -12,7 +12,7 @@ public partial class PremiumCityView : Control
     private Camera3D? _camera;
     private DirectionalLight3D? _sun;
     private WorldEnvironment? _worldEnvironment;
-    private Environment? _environment;
+    private Godot.Environment? _environment;
     private CityWeatherOverlay? _weatherOverlay;
 
     private readonly List<(MultiMeshInstance3D Node, int FullCount)> _scalableGroups = [];
@@ -147,14 +147,14 @@ public partial class PremiumCityView : Control
         _worldRoot = new Node3D { Name = "World3D" };
         _viewport.AddChild(_worldRoot);
 
-        _environment = new Environment
+        _environment = new Godot.Environment
         {
-            BackgroundMode = Environment.BGMode.Color,
+            BackgroundMode = Godot.Environment.BGMode.Color,
             BackgroundColor = new Color(0.035f, 0.09f, 0.13f),
-            AmbientLightSource = Environment.AmbientSource.Color,
+            AmbientLightSource = Godot.Environment.AmbientSource.Color,
             AmbientLightColor = new Color(0.44f, 0.55f, 0.62f),
             AmbientLightEnergy = 0.78f,
-            TonemapMode = Environment.ToneMapper.Agx
+            TonemapMode = Godot.Environment.ToneMapper.Agx
         };
 
         _worldEnvironment = new WorldEnvironment
