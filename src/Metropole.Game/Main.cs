@@ -61,12 +61,11 @@ public partial class Main : Control
 
     private void EnsureAudioDirector()
     {
-        var root = GetTree().Root;
-        _audio = root.GetNodeOrNull<AudioDirector>("AudioDirector");
+        _audio = GetNodeOrNull<AudioDirector>("AudioDirector");
         if (_audio is not null) return;
 
         _audio = new AudioDirector { Name = "AudioDirector" };
-        root.AddChild(_audio);
+        AddChild(_audio);
     }
 
     private void RunUiValidation()
