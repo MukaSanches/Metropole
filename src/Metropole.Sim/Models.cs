@@ -4,7 +4,7 @@ public sealed class GameState
 {
     public const int CurrentSchemaVersion = 1;
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;
-    public string RulesVersion { get; set; } = "1.2.0";
+    public string RulesVersion { get; set; } = "1.5.0";
     public long Seed { get; set; }
     public int CurrentDay { get; set; }
     public int CurrentHour { get; set; } = 8;
@@ -63,6 +63,9 @@ public sealed class PlayerState
     public string CurrentActivity { get; set; } = "Em casa";
     public string RelationshipStatus { get; set; } = "Solteiro";
     public string? PartnerName { get; set; }
+    public int? PartnerCitizenId { get; set; }
+    public int RelationshipStartDay { get; set; } = -1;
+    public int MarriageDay { get; set; } = -1;
     public int Children { get; set; }
     public Dictionary<string, int> Skills { get; set; } = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -108,6 +111,12 @@ public sealed class CitizenState
     public decimal RiskTolerance { get; set; } = 0.5m;
     public string CurrentActivity { get; set; } = "Em casa";
     public int? PartnerCitizenId { get; set; }
+    public decimal PlayerFamiliarity { get; set; }
+    public decimal PlayerAffinity { get; set; }
+    public decimal PlayerTrust { get; set; }
+    public string PlayerRelationshipStatus { get; set; } = "Desconhecido";
+    public bool IsPlayerPartner { get; set; }
+    public int LastPlayerInteractionDay { get; set; } = -9999;
     public int LastCareerChangeDay { get; set; }
     public bool Alive { get; set; } = true;
     public int AgeYears => AgeDays / 365;
