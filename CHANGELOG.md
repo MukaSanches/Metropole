@@ -1,5 +1,43 @@
 # Changelog
 
+## 1.5.0 - 2026-09-21
+
+### Acabamento 3D
+- câmera isométrica com interpolação suave de posição, zoom e rotação;
+- foco rápido no bairro/empresa do jogador;
+- rotação de câmera em 90° e reset de visão;
+- material PBR dedicado para asfalto, com roughness/specular reagindo à chuva;
+- correção de cor dinâmica por clima;
+- névoa e scattering ajustados ao estado meteorológico;
+- glow e volumetric fog limitados aos perfis/renderers adequados;
+- luminárias urbanas com emissão e luz local sem sombras;
+- acentos luminosos de distrito;
+- anti-aliasing, TAA/MSAA/SMAA/FXAA e mesh LOD adaptados ao perfil de qualidade.
+
+### Cidade e cidadãos
+- personagens 3D detalhados passam a representar cidadãos reais;
+- posição de pedestres segue o bairro real do cidadão;
+- cidadãos dormindo/em casa deixam de aparecer andando na rua;
+- animação alterna entre movimento e idle conforme atividade;
+- velocidade da animação reage à energia do cidadão;
+- tráfego e pedestres continuam separados da verdade lógica da simulação.
+
+### Áudio
+- transições de volume da cidade e chuva agora usam crossfade;
+- ambiência muda suavemente entre dia, horário de pico e noite;
+- chuva leve/forte muda intensidade sem cortes abruptos.
+
+### Performance
+- iluminação local é limitada por perfil: Ultra > High > Medium > Low;
+- Low não usa luzes locais nem camada detalhada pesada;
+- mesh LOD fica mais agressivo em perfis inferiores;
+- efeitos Forward+ permanecem condicionados ao renderer;
+- simulação continua independente da taxa de quadros.
+
+### QA
+- validação premium agora exige material de estrada, camada de polimento e pelo menos 12 luminárias;
+- mantém validação de assets CC0, AnimationPlayer, áudio, fallback, export, instalação e execução pós-instalação.
+
 ## 1.4.0 - 2026-09-21
 
 ### Assets
