@@ -136,15 +136,10 @@ public sealed partial class SimulationEngine
         State.Player.AgeDays++;
         State.Player.Health = Clamp(State.Player.Health + (State.Player.Energy > 45m ? 0.05m : -0.10m), 0m, 100m);
 
-        if (State.CurrentDay % 365 == 0 && State.Player.AgeYears is >= 25 and <= 50 &&
-            !string.IsNullOrWhiteSpace(State.Player.PartnerName) && rng.Chance(0.12))
-        {
-            State.Player.Children++;
-            AddHistory("Família", "Nasceu um descendente na família do jogador.", "ciclo familiar anual");
-        }
-
         foreach (var citizen in State.Citizens.Where(c => c.Alive))
             citizen.AgeDays++;
+
+        SocialActions.UpdateDailyPlayerRelationships(State);
 
         if (State.CurrentDay % 7 == 0)
         {
