@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.4.0 - 2026-09-21
+
+### Visual assets
+- integração de prédios urbanos Kenney CC0 no renderer premium;
+- landmarks GLB por distrito sem substituir o MultiMesh escalável;
+- luminárias e props urbanos reais nos perfis High/Ultra;
+- ajuste automático de escala dos modelos importados por AABB;
+- assets externos ocultados automaticamente nos perfis de desempenho menores.
+
+### Citizens & animation
+- seis modelos humanos Quaternius CC0;
+- personagens masculinos e femininos;
+- rigs e clips AnimationPlayer validados no executável exportado;
+- cidadãos próximos usam animação Walk real;
+- animações são pausadas quando o perfil gráfico os oculta;
+- população distante continua usando proxies MultiMesh baratos.
+
+### Audio
+- novo AudioDirector persistente;
+- buses UI, Ambience e Weather;
+- trânsito urbano em loop reagindo aos horários de pico;
+- chuva real em loop reagindo ao clima;
+- vento reagindo a chuva, neblina e céu nublado;
+- efeitos sonoros Kenney para hover e clique de botões;
+- crossfade de volume sem interromper a simulação.
+
+### Licensing & QA
+- apenas assets CC0 auditados;
+- documentação de origem em `docs/ASSET_PROVENANCE_V1.4.md`;
+- pipeline reprova a release se modelos, animações ou streams de áudio não carregarem;
+- marcador obrigatório `METROPOLE_ASSET_VALIDATION_OK`;
+- renderer 2D leve permanece preservado.
+
 ## 1.3.0 - 2026-09-21
 
 ### Renderer
