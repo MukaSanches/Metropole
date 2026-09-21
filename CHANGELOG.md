@@ -1,5 +1,36 @@
 # Changelog
 
+## 1.4.0 - 2026-09-21
+
+### Assets CC0
+- integração automatizada de Kenney City Kit Commercial, Industrial, Suburban e Roads;
+- integração do Kenney Car Kit;
+- integração do Kenney Mini Characters;
+- procedência e licença CC0 registradas no build e na documentação;
+- assets externos são baixados no pipeline de build, mantendo o repositório de código enxuto.
+
+### Cidade e animação
+- prédios 3D licenciados passam a complementar os MultiMeshes procedurais;
+- veículos reais do pack Kenney circulam nas vias principais;
+- personagens 3D reais passam a circular nos bairros;
+- clips importados são reproduzidos quando diretamente compatíveis;
+- locomação visível tem fallback controlado pelo Godot quando um clip externo exige retargeting;
+- qualidade continua escalável para preservar PCs leves.
+
+### Áudio
+- 100 sons de interface Kenney disponíveis no pacote;
+- clique e hover recebem feedback sonoro;
+- chuva loopável reage ao clima;
+- ambiência de multidão reage ao horário e população;
+- buses separados para UI, Weather e Ambience.
+
+### QA
+- pipeline baixa e valida quantidade mínima de modelos, personagens e sons;
+- validação do executável exige assets realmente presentes no PCK;
+- cidade premium exige prédios, veículos e personagens instanciados;
+- pelo menos um personagem visível animado é obrigatório;
+- fallback 2D continua validado separadamente.
+
 ## 1.3.0 - 2026-09-21
 
 ### Renderer
