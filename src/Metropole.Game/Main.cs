@@ -11,6 +11,7 @@ public partial class Main : Control
     private SimulationEngine? _sim;
     private CityView? _cityView;
     private PremiumCityView? _premiumCityView;
+    private GameAudioDirector? _audio;
     private Label? _graphicsBadge;
     private VBoxContainer? _sidebar;
     private Label? _dateLabel;
@@ -43,6 +44,9 @@ public partial class Main : Control
         SetProcess(true);
         GetWindow().MinSize = new Vector2I(1280, 720);
 
+        _audio = new GameAudioDirector { Name = "MetropoleAudioDirector" };
+        GetTree().Root.AddChild(_audio);
+
         var validationRequested =
             OS.GetCmdlineUserArgs().Contains("--validation-run") ||
             string.Equals(System.Environment.GetEnvironmentVariable("METROPOLE_UI_VALIDATION"), "1", StringComparison.Ordinal);
@@ -61,7 +65,11 @@ public partial class Main : Control
     {
         try
         {
+            var assetReport = ExternalAssetLibrary.ValidateImportedAssets();
+            GD.Print($"METROPOLE_ASSET_VALIDATION_OK {assetReport}");
+
             _sim = new SimulationEngine(WorldGenerator.Generate(120260921, "Validação"));
+            _audio?.SetSimulation(_sim);
             BuildGameScreen();
 
             foreach (var mode in Enum.GetValues<SidebarMode>())
@@ -144,6 +152,7 @@ public partial class Main : Control
     private void ShowStartScreen()
     {
         _sim = null;
+        _audio?.SetSimulation(null);
         _speed = 0;
         _tickAccumulator = 0;
         _nav.Clear();
@@ -221,6 +230,7 @@ public partial class Main : Control
             try
             {
                 _sim = new SimulationEngine(WorldGenerator.Generate(chosenSeed, name.Text));
+                _audio?.SetSimulation(_sim);
                 _mode = SidebarMode.Visao;
                 BuildGameScreen();
                 SetStatus($"Mundo criado • seed {chosenSeed}");
@@ -241,6 +251,7 @@ public partial class Main : Control
                 try
                 {
                     _sim = new SimulationEngine(SaveStore.Load(SavePath));
+                    _audio?.SetSimulation(_sim);
                     _mode = SidebarMode.Visao;
                     BuildGameScreen();
                     SetStatus("Save carregado com sucesso.");
@@ -260,7 +271,7 @@ public partial class Main : Control
             $"{metrics.ProfessionArchetypes:N0} profissões • {metrics.BusinessArchetypes:N0} negócios\n" +
             $"{metrics.Products:N0} produtos • {metrics.Events:N0} eventos combináveis",
             12, _muted));
-        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.3.0", 11, _muted2, false));
+        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.4.0", 11, _muted2, false));
     }
 
     private void BuildGameScreen()
@@ -1086,6 +1097,8 @@ public partial class Main : Control
             button.IconAlignment = HorizontalAlignment.Left;
         }
         ApplyButtonStyle(button, primary, false);
+        button.MouseEntered += () => _audio?.PlayHover();
+        button.Pressed += () => _audio?.PlayClick();
         return button;
     }
 
