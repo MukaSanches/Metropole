@@ -284,15 +284,26 @@ public partial class ExternalAssetLayer : Node3D
         var animations = player.GetAnimationList();
         if (animations.Length == 0) return;
 
-        var selected = animations.FirstOrDefault(name =>
-            name.ToString().Contains(preferredToken, StringComparison.OrdinalIgnoreCase));
+        var selected = animations[0];
+        var found = false;
 
-        if (selected.IsEmpty)
-            selected = animations.FirstOrDefault(name =>
-                name.ToString().Contains("idle", StringComparison.OrdinalIgnoreCase));
+        foreach (var name in animations)
+        {
+            if (!name.ToString().Contains(preferredToken, StringComparison.OrdinalIgnoreCase)) continue;
+            selected = name;
+            found = true;
+            break;
+        }
 
-        if (selected.IsEmpty)
-            selected = animations[0];
+        if (!found)
+        {
+            foreach (var name in animations)
+            {
+                if (!name.ToString().Contains("idle", StringComparison.OrdinalIgnoreCase)) continue;
+                selected = name;
+                break;
+            }
+        }
 
         player.Play(selected);
     }
