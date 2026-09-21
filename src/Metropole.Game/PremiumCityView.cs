@@ -32,6 +32,8 @@ public partial class PremiumCityView : Control
     private float _cameraSize = 47f;
     private bool _dragging;
     private Vector2 _lastMouse;
+    private int _lastBuiltDay = -1;
+    private int _lastOpenCompanies = -1;
 
     public string Diagnostics =>
         $"{GraphicsQuality.RenderingMethod}/{GraphicsQuality.RenderingDriver} • {_quality.ToString().ToUpperInvariant()} • 3D";
@@ -42,6 +44,22 @@ public partial class PremiumCityView : Control
         _weatherOverlay?.SetEngine(engine);
         if (IsNodeReady())
             RebuildWorld();
+    }
+
+    public void RefreshFromSimulation()
+    {
+        if (_engine is null) return;
+
+        var state = _engine.State;
+        var structuralChange =
+            _lastOpenCompanies != state.OpenCompanies ||
+            _lastBuiltDay < 0 ||
+            state.CurrentDay - _lastBuiltDay >= 7;
+
+        if (structuralChange)
+            RebuildWorld();
+        else
+            UpdateAtmosphere();
     }
 
     public override void _Ready()
@@ -196,6 +214,8 @@ public partial class PremiumCityView : Control
         BuildDistricts();
         BuildVehicles();
         BuildPedestrians();
+        _lastBuiltDay = _engine.State.CurrentDay;
+        _lastOpenCompanies = _engine.State.OpenCompanies;
         UpdateAtmosphere();
         ApplyQualityFeatures();
     }
