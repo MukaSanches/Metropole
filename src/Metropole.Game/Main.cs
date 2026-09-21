@@ -10,6 +10,8 @@ public partial class Main : Control
 
     private SimulationEngine? _sim;
     private CityView? _cityView;
+    private PremiumCityView? _premiumCityView;
+    private Label? _graphicsBadge;
     private VBoxContainer? _sidebar;
     private Label? _dateLabel;
     private Label? _cashLabel;
@@ -258,7 +260,7 @@ public partial class Main : Control
             $"{metrics.ProfessionArchetypes:N0} profissões • {metrics.BusinessArchetypes:N0} negócios\n" +
             $"{metrics.Products:N0} produtos • {metrics.Events:N0} eventos combináveis",
             12, _muted));
-        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.2.0", 11, _muted2, false));
+        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.3.0", 11, _muted2, false));
     }
 
     private void BuildGameScreen()
@@ -395,6 +397,8 @@ public partial class Main : Control
         titles.AddChild(_mapSubtitle);
         head.AddChild(titles);
         head.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
+        _graphicsBadge = MakeBadge("RENDER", _accent, new Color(0.07f, 0.20f, 0.22f));
+        head.AddChild(_graphicsBadge);
         head.AddChild(MakeBadge("● ONLINE LOCAL", _accent, new Color(0.07f, 0.20f, 0.22f)));
         box.AddChild(head);
 
@@ -404,14 +408,31 @@ public partial class Main : Control
         frame.ClipContents = true;
         box.AddChild(frame);
 
-        _cityView = new CityView
+        _cityView = null;
+        _premiumCityView = null;
+
+        if (GraphicsQuality.SupportsPremium3D)
         {
-            SizeFlagsHorizontal = SizeFlags.ExpandFill,
-            SizeFlagsVertical = SizeFlags.ExpandFill,
-            CustomMinimumSize = new Vector2(620, 480)
-        };
-        _cityView.SetEngine(_sim!);
-        frame.AddChild(_cityView);
+            _premiumCityView = new PremiumCityView
+            {
+                SizeFlagsHorizontal = SizeFlags.ExpandFill,
+                SizeFlagsVertical = SizeFlags.ExpandFill,
+                CustomMinimumSize = new Vector2(620, 480)
+            };
+            _premiumCityView.SetEngine(_sim!);
+            frame.AddChild(_premiumCityView);
+        }
+        else
+        {
+            _cityView = new CityView
+            {
+                SizeFlagsHorizontal = SizeFlags.ExpandFill,
+                SizeFlagsVertical = SizeFlags.ExpandFill,
+                CustomMinimumSize = new Vector2(620, 480)
+            };
+            _cityView.SetEngine(_sim!);
+            frame.AddChild(_cityView);
+        }
 
         var footer = new HBoxContainer();
         footer.AddThemeConstantOverride("separation", 10);
@@ -419,7 +440,11 @@ public partial class Main : Control
         footer.AddChild(MakeLegend(_gold, "Sua empresa"));
         footer.AddChild(MakeLegend(_muted, "Economia local"));
         footer.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
-        footer.AddChild(MakeLabel("dia/noite • clima • pedestres • tráfego vivo", 10, _muted2, false));
+        footer.AddChild(MakeLabel(
+            GraphicsQuality.SupportsPremium3D
+                ? "2.5D • MultiMesh • qualidade adaptativa • zoom/pan"
+                : "fallback leve • dia/noite • clima • tráfego",
+            10, _muted2, false));
         box.AddChild(footer);
         return panel;
     }
@@ -504,6 +529,13 @@ public partial class Main : Control
         _jobLabel!.Text = employer?.Name ?? "Em busca de trabalho";
         _mapSubtitle!.Text = $"{s.Population:N0} hab. • {s.OpenCompanies:N0} empresas • {s.Weather} {s.TemperatureC:0}°C • confiança {s.CityConfidence:P0}";
         _cityView?.QueueRedraw();
+        _premiumCityView?.RefreshFromSimulation();
+        if (_graphicsBadge is not null)
+        {
+            _graphicsBadge.Text = _premiumCityView is not null
+                ? _premiumCityView.Diagnostics
+                : $"{GraphicsQuality.RenderingMethod}/{GraphicsQuality.RenderingDriver} • LOW • 2D";
+        }
         UpdateNavState();
         RefreshSidebar();
     }
