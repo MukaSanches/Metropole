@@ -18,26 +18,39 @@ public static class ThirdPartyAssetCatalog
 
     public static IReadOnlyList<string> SceneFiles(string folder)
     {
+        var manifest = ManifestFiles()
+            .Where(x => x.StartsWith(folder + "/", StringComparison.OrdinalIgnoreCase) && IsSceneAsset(x))
+            .OrderBy(ScenePreference)
+            .ThenBy(x => x, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (manifest.Length > 0)
+            return manifest;
+
         if (!DirAccess.DirExistsAbsolute(folder))
             return Array.Empty<string>();
 
         return DirAccess.GetFilesAt(folder)
             .Where(IsSceneAsset)
-            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(ScenePreference)
+            .ThenBy(x => x, StringComparer.OrdinalIgnoreCase)
             .Select(x => $"{folder}/{x}")
             .ToArray();
     }
 
     public static IReadOnlyList<string> AudioFiles(string folder)
     {
+        var manifest = ManifestFiles()
+            .Where(x => x.StartsWith(folder + "/", StringComparison.OrdinalIgnoreCase) && IsAudioAsset(x))
+            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (manifest.Length > 0)
+            return manifest;
+
         if (!DirAccess.DirExistsAbsolute(folder))
             return Array.Empty<string>();
 
         return DirAccess.GetFilesAt(folder)
-            .Where(x =>
-                x.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase) ||
-                x.EndsWith(".wav", StringComparison.OrdinalIgnoreCase) ||
-                x.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase))
+            .Where(IsAudioAsset)
             .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
             .Select(x => $"{folder}/{x}")
             .ToArray();
@@ -103,8 +116,30 @@ public static class ThirdPartyAssetCatalog
             throw new InvalidDataException("Áudio de cidade não foi importado.");
     }
 
+    private static IReadOnlyList<string> ManifestFiles()
+    {
+        const string path = Root + "/asset_manifest.txt";
+        if (!FileAccess.FileExists(path))
+            return Array.Empty<string>();
+
+        var text = FileAccess.GetFileAsString(path);
+        return text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
     private static bool IsSceneAsset(string file) =>
         file.EndsWith(".glb", StringComparison.OrdinalIgnoreCase) ||
         file.EndsWith(".gltf", StringComparison.OrdinalIgnoreCase) ||
         file.EndsWith(".fbx", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsAudioAsset(string file) =>
+        file.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase) ||
+        file.EndsWith(".wav", StringComparison.OrdinalIgnoreCase) ||
+        file.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase);
+
+    private static int ScenePreference(string file)
+    {
+        if (file.EndsWith(".glb", StringComparison.OrdinalIgnoreCase)) return 0;
+        if (file.EndsWith(".gltf", StringComparison.OrdinalIgnoreCase)) return 1;
+        return 2;
+    }
 }
