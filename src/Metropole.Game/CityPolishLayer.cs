@@ -15,7 +15,7 @@ public partial class CityPolishLayer : Node3D
 
     public int StreetLightCount => _lamps.Count;
     public int ActiveLocalLightCount => _lamps.Count(x => x.Light.Visible && x.Light.LightEnergy > 0.02f);
-    public bool Ready => _lamps.Count >= 12 && _lampMaterial is not null;
+    public bool IsPolishReady => _lamps.Count >= 12 && _lampMaterial is not null;
 
     public void SetEngine(SimulationEngine engine) => _engine = engine;
 
