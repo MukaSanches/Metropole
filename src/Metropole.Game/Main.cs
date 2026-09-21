@@ -40,7 +40,70 @@ public partial class Main : Control
     {
         SetProcess(true);
         GetWindow().MinSize = new Vector2I(1280, 720);
+
+        if (OS.GetCmdlineUserArgs().Contains("--validation-run"))
+        {
+            CallDeferred(MethodName.RunUiValidation);
+            return;
+        }
+
         ShowStartScreen();
+    }
+
+    private void RunUiValidation()
+    {
+        try
+        {
+            _sim = new SimulationEngine(WorldGenerator.Generate(120260921, "Validação"));
+            BuildGameScreen();
+
+            foreach (var mode in Enum.GetValues<SidebarMode>())
+            {
+                _mode = mode;
+                RefreshAll();
+            }
+
+            var job = _sim.GetJobBoard(1).FirstOrDefault();
+            if (job is not null)
+            {
+                _sim.AcceptJob(job.Id);
+                _sim.WorkShift(8);
+            }
+
+            _sim.State.Player.Cash = Math.Max(_sim.State.Player.Cash, 25_000m);
+            if (_sim.State.Player.BusinessCompanyId is null)
+                _sim.OpenPlayerBusiness(ContentCatalog.Sectors[0].Name);
+
+            if (_sim.State.Player.BusinessCompanyId is int companyId)
+            {
+                _sim.ConfigureBrand("Metrópole Lab", "A cidade em movimento.");
+                _sim.SetPricingStrategy("Premium");
+                _sim.AdjustMarketingBudget(25m);
+                var company = _sim.State.Companies.First(c => c.Id == companyId);
+                company.Cash += 5_000m;
+                _sim.InvestInQuality(1_500m);
+                _sim.InvestInInnovation(1_500m);
+            }
+
+            _sim.Socialize(3);
+            _sim.Study(4);
+            _sim.AdvanceHours(30);
+
+            foreach (var mode in Enum.GetValues<SidebarMode>())
+            {
+                _mode = mode;
+                RefreshAll();
+            }
+
+            GD.Print($"METROPOLE_UI_VALIDATION_OK day={_sim.State.CurrentDay} hour={_sim.State.CurrentHour} companies={_sim.State.OpenCompanies} population={_sim.State.Population}");
+            GetTree().Quit(0);
+        }
+        catch (Exception ex)
+        {
+            GD.PrintErr("METROPOLE_UI_VALIDATION_FAILED");
+            GD.PrintErr(ex);
+            GetTree().Quit(2);
+        }
     }
 
     public override void _Process(double delta)
