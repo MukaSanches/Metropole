@@ -28,3 +28,19 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 See https://godotengine.org/license/
+
+
+## Runtime art and audio assets — METRÓPOLE ∞ 1.4
+
+The following asset families are distributed under CC0 1.0 / Public Domain Dedication:
+
+- Kenney city-kit 3D assets — https://kenney.nl/
+- Kenney UI Audio — https://kenney.nl/assets/ui-audio
+- Quaternius Animated Men / Animated Women — https://quaternius.com/
+- IgnasD — High traffic road sounds (OpenGameArt)
+- alxl — Rain on Window Loop (OpenGameArt)
+- SketchMan3 — wind whoosh loop (OpenGameArt)
+
+Detailed file-level provenance, source commits and runtime paths are recorded in `docs/ASSET_PROVENANCE_V1.4.md`.
+
+CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/
