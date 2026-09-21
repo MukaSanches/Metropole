@@ -18,6 +18,7 @@ public partial class ExternalAssetLayer : Node3D
     private sealed class PersonProxy
     {
         public required Node3D Node { get; init; }
+        public required int CitizenId { get; init; }
         public required int DistrictIndex { get; init; }
         public required bool AlongX { get; init; }
         public required float Edge { get; init; }
@@ -66,8 +67,24 @@ public partial class ExternalAssetLayer : Node3D
         "res://assets/external/kenney/characters/male-c.glb"
     ];
 
+    public event Action<int>? PersonSelected;
+
     public int DetailedAssetCount => _buildings.Count + _vehicles.Count + _people.Count;
     public int AnimatedProxyCount => _people.Count(p => p.Animation is not null);
+    public int InteractivePersonCount => _people.Count;
+
+    public bool TryGetCitizenPosition(int citizenId, out Vector3 position)
+    {
+        var proxy = _people.FirstOrDefault(p => p.CitizenId == citizenId);
+        if (proxy is null)
+        {
+            position = Vector3.Zero;
+            return false;
+        }
+
+        position = proxy.Node.GlobalPosition;
+        return true;
+    }
 
     public void SetEngine(SimulationEngine engine) => _engine = engine;
 
@@ -220,24 +237,64 @@ public partial class ExternalAssetLayer : Node3D
     private void BuildAnimatedPeople()
     {
         if (_engine is null) return;
-        const int count = 30;
 
-        for (var i = 0; i < count; i++)
+        var citizens = _engine.State.Citizens
+            .Where(c => c.Alive && c.AgeYears >= 18)
+            .OrderByDescending(c => c.IsPlayerPartner)
+            .ThenByDescending(c => c.PlayerFamiliarity)
+            .ThenBy(c => c.Id)
+            .Take(30)
+            .ToArray();
+
+        for (var i = 0; i < citizens.Length; i++)
         {
-            var node = InstantiateScene(CharacterScenes[i % CharacterScenes.Length]);
-            if (node is null) continue;
+            var citizen = citizens[i];
+            var model = InstantiateScene(CharacterScenes[i % CharacterScenes.Length]);
+            if (model is null) continue;
 
-            node.Scale = Vector3.One * 0.58f;
-            AddChild(node);
+            var anchor = new Node3D { Name = $"Citizen_{citizen.Id}" };
+            AddChild(anchor);
 
-            var animation = FindAnimationPlayer(node);
+            model.Scale = Vector3.One * 0.58f;
+            anchor.AddChild(model);
+
+            var animation = FindAnimationPlayer(model);
             PlayBestAnimation(animation, "walk");
 
-            var hash = StableHash($"detail-person:{i}");
+            var area = new Area3D
+            {
+                Name = $"CitizenPick_{citizen.Id}",
+                InputRayPickable = true,
+                CollisionLayer = 1u << 7,
+                CollisionMask = 0
+            };
+            var shape = new CollisionShape3D
+            {
+                Position = new Vector3(0, 0.95f, 0),
+                Shape = new CapsuleShape3D
+                {
+                    Radius = 0.42f,
+                    Height = 1.85f
+                }
+            };
+            area.AddChild(shape);
+            anchor.AddChild(area);
+
+            var selectedId = citizen.Id;
+            area.InputEvent += (Node camera, InputEvent @event, Vector3 eventPosition, Vector3 normal, long shapeIdx) =>
+            {
+                if (@event is InputEventMouseButton mouse &&
+                    mouse.ButtonIndex == MouseButton.Left &&
+                    mouse.Pressed)
+                    PersonSelected?.Invoke(selectedId);
+            };
+
+            var hash = StableHash($"detail-person:{citizen.Id}");
             _people.Add(new PersonProxy
             {
-                Node = node,
-                DistrictIndex = i % Math.Max(1, _engine.State.Districts.Count),
+                Node = anchor,
+                CitizenId = citizen.Id,
+                DistrictIndex = Math.Max(0, _engine.State.Districts.FindIndex(d => d.Id == citizen.DistrictId)),
                 AlongX = (hash & 1) == 0,
                 Edge = ((hash >> 2) & 1) == 0 ? 4.72f : -4.72f,
                 Speed = 0.010f + Hash01(hash >> 7) * 0.008f,
