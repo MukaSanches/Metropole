@@ -165,6 +165,10 @@ static void TestSocialLifecycle()
     state.CurrentHour = 12;
     state.Player.Cash = 25_000m;
 
+    engine.Socialize(3);
+    Check(state.Player.PartnerCitizenId is null, "socialização genérica criou parceiro automaticamente");
+    Check(state.Player.RelationshipStatus == "Solteiro", "socialização genérica alterou estado romântico");
+
     var person = state.Citizens
         .First(c => c.Alive && c.AgeYears >= 20 && c.DistrictId == state.Player.DistrictId);
 
@@ -198,7 +202,19 @@ static void TestSocialLifecycle()
     var moneyBeforeMarriage = state.TotalLiquidMoney();
     Check(engine.ProposeMarriage(), "casamento válido falhou");
     Check(state.Player.RelationshipStatus == "Casado", "estado de casamento não foi aplicado");
+    Check(person.PlayerRelationshipStatus == "Cônjuge", "cidadão parceiro não virou cônjuge");
+    Check(person.DistrictId == state.Player.DistrictId, "cônjuge não passou a compartilhar o bairro do jogador");
     Check(Math.Abs(state.TotalLiquidMoney() - moneyBeforeMarriage) <= 0.02m, "casamento criou/destruiu dinheiro");
+
+    var affinityBeforeNeglect = person.PlayerAffinity;
+    person.LastPlayerInteractionDay = state.CurrentDay - 9;
+    SocialActions.UpdateDailyPlayerRelationships(state);
+    Check(person.PlayerAffinity < affinityBeforeNeglect, "abandono prolongado não afetou afinidade do casal");
+
+    var moveTarget = state.Districts.First(d => d.Id != state.Player.DistrictId);
+    state.Player.Cash = Math.Max(state.Player.Cash, 20_000m);
+    Check(engine.MovePlayerDistrict(moveTarget.Id), "mudança do casal falhou");
+    Check(person.DistrictId == moveTarget.Id, "cônjuge não acompanhou mudança residencial");
 
     state.Player.MarriageDay = state.CurrentDay - 40;
     person.PlayerAffinity = 92m;
