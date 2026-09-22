@@ -70,7 +70,8 @@ public partial class Main : Control
             await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
             await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 
-            if (FindChild("MenuCityBackdrop", true, false) is not MenuCityBackdrop menuBackdrop ||
+            var menuBackdrop = FindChild("MenuCityBackdrop", true, false) as MenuCityBackdrop;
+            if (menuBackdrop is null ||
                 menuBackdrop.AssetCount < 20 ||
                 menuBackdrop.AnimatedCharacterCount < 1)
                 throw new InvalidOperationException(
