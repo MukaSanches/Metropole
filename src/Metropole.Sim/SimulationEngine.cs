@@ -6,6 +6,7 @@ public sealed partial class SimulationEngine
 
     public SimulationEngine(GameState state)
     {
+        SystemicBootstrap.UpgradeLegacySchema(state);
         SimulationValidator.Validate(state);
         State = state;
     }
@@ -555,6 +556,23 @@ public static class SimulationValidator
         if (state.Companies.Any(c => c.BrandAwareness is < 0m or > 1m || c.ProductQuality is < 0m or > 1m ||
                                      c.EmployeeMorale is < 0m or > 1m || c.PriceMultiplier <= 0m))
             throw new InvalidDataException("Indicadores empresariais inválidos.");
+        if (state.Player.Hygiene is < 0m or > 100m || state.Player.Fun is < 0m or > 100m ||
+            state.Player.Comfort is < 0m or > 100m || state.Player.Security is < 0m or > 100m)
+            throw new InvalidDataException("Necessidades sistêmicas do jogador fora do intervalo.");
+        if (state.Citizens.Any(c => c.Health is < 0m or > 100m || c.Hygiene is < 0m or > 100m ||
+                                    c.SocialNeed is < 0m or > 100m || c.Fun is < 0m or > 100m ||
+                                    c.Comfort is < 0m or > 100m))
+            throw new InvalidDataException("Necessidades sistêmicas de cidadão fora do intervalo.");
+        if (state.Relationships.Any(r => r.CitizenAId == r.CitizenBId ||
+                                         r.Familiarity is < 0m or > 1m || r.Friendship is < 0m or > 1m ||
+                                         r.Trust is < 0m or > 1m || r.Attraction is < 0m or > 1m ||
+                                         r.Respect is < 0m or > 1m || r.Resentment is < 0m or > 1m ||
+                                         r.Romance is < 0m or > 1m))
+            throw new InvalidDataException("Grafo social contém relação inválida.");
+
+        var citizenIds = state.Citizens.Select(c => c.Id).ToHashSet();
+        if (state.Relationships.Any(r => !citizenIds.Contains(r.CitizenAId) || !citizenIds.Contains(r.CitizenBId)))
+            throw new InvalidDataException("Grafo social aponta para cidadão inexistente.");
 
         var openCompanyIds = state.Companies.Where(c => c.Open).Select(c => c.Id).ToHashSet();
         foreach (var citizen in state.Citizens.Where(c => c.Alive && c.EmployedCompanyId is not null))
