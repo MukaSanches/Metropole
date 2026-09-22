@@ -115,6 +115,7 @@ public static class LifeActions
 
         UpdatePlayerHour(state, forcedPlayerActivity);
         UpdateCitizenHour(state);
+        LivingCitySystems.AdvanceHour(state);
 
         if (state.CurrentHour == 0)
             engine.AdvanceOneDay();
