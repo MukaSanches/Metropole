@@ -296,8 +296,13 @@ public partial class MenuCityBackdrop : Control
             .Where(x => !x.ToString().Contains("RESET", StringComparison.OrdinalIgnoreCase))
             .ToArray();
         if (animations.Length == 0) return;
-        var chosen = animations.FirstOrDefault(x => x.ToString().Contains(token, StringComparison.OrdinalIgnoreCase));
-        if (chosen == default) chosen = animations[0];
+        var chosen = animations[0];
+        foreach (var candidate in animations)
+        {
+            if (!candidate.ToString().Contains(token, StringComparison.OrdinalIgnoreCase)) continue;
+            chosen = candidate;
+            break;
+        }
         player.Play(chosen);
     }
 }
