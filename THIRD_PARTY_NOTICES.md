@@ -69,3 +69,14 @@ Poly Haven assets are released under Creative Commons CC0 1.0 Universal.
 Canonical source and license: https://polyhaven.com/license
 
 Detailed source records are maintained in `docs/EXTERNAL_ASSETS_V1.5.md`.
+
+
+## KayKit CC0 assets
+
+METRÓPOLE ∞ 1.7 usa o pack oficial KayKit City Builder Bits 1.0 para edifícios residenciais e pequenos elementos urbanos. O pack é distribuído sob Creative Commons CC0 1.0 Universal.
+
+A origem e o commit pinado são registrados em `docs/EXTERNAL_ASSETS_V1.7.md`.
+
+## Kenney expanded urban library
+
+A 1.7 amplia o uso de packs Kenney CC0 com variantes adicionais de City Kit (Commercial), City Kit (Industrial), Car Kit e Factory Kit. Os assets entram como camada visual e não alteram a verdade da simulação.
