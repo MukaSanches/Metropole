@@ -17,6 +17,7 @@ public sealed partial class SimulationEngine
         InitializeExtendedCompanyState();
         UpdateWeather(rng);
         UpdateCitizenLives(rng);
+        ProcessSystemicSystems(rng);
         UpdateCompanyStrategies(rng);
         UpdateMarketSharesAndRivalries();
         UpdateCompanyFinanceHistory();
