@@ -12,6 +12,7 @@ public static class SaveStore
 
     public static void Save(string path, GameState state)
     {
+        LivingCitySystems.EnsureInitialized(state);
         SimulationValidator.Validate(state);
         var directory = Path.GetDirectoryName(path);
         if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
@@ -48,6 +49,7 @@ public static class SaveStore
         var state = JsonSerializer.Deserialize<GameState>(File.ReadAllText(path), Options)
             ?? throw new InvalidDataException("Save vazio ou inválido.");
         ValidateSchema(state);
+        LivingCitySystems.EnsureInitialized(state);
         SimulationValidator.Validate(state);
         return state;
     }
