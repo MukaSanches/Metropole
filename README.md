@@ -1,3 +1,20 @@
+# METRÓPOLE ∞ — 1.8 Living Streets
+
+Evolução da base 1.7, mantendo simulação, saves e fallback gráfico existentes.
+
+- Praças com fontes de malhas compartilhadas e água animada por shader, apenas nos perfis High/Ultra.
+- Vitrines com toldos e terraços com quatro modelos CC0 antes apenas baixados.
+- Pedestres com percurso fechado, curvas suaves e animações com transição de 220 ms.
+- Personagens parados deixam de deslizar; corrida e caminhada usam prioridade de clipes.
+- Bairro visual acompanha o cidadão; personagens dormindo ou falecidos deixam as ruas.
+- Personagens ocultos têm processamento suspenso; orçamento de detalhes por perfil preservado.
+- Tráfego integrado por delta: mudanças de horário e chuva alteram velocidade sem saltos de posição.
+- Removida alocação de dicionário de toda a população a cada atualização visual.
+
+Validação da 1.8: consulte o workflow Windows V1.8. Não há garantia de FPS em hardware não testado.
+
+---
+
 # METRÓPOLE ∞
 
 METRÓPOLE ∞ é um simulador sistêmico para Windows em que vida pessoal, relacionamentos, trabalho, empresas, mercados, bairros e cidadãos evoluem continuamente.
