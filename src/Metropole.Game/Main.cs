@@ -116,7 +116,7 @@ public partial class Main : Control
                 if (_premiumCityView.AnimatedProxyCount < 1)
                     throw new InvalidOperationException("Nenhum personagem CC0 com AnimationPlayer foi validado.");
                 if (!_premiumCityView.PolishReady)
-                    throw new InvalidOperationException("Camada de polimento 1.5 não foi inicializada.");
+                    throw new InvalidOperationException("Camada de polimento premium não foi inicializada.");
                 if (_premiumCityView.StreetLightCount < 12)
                     throw new InvalidOperationException($"Iluminação urbana incompleta: {_premiumCityView.StreetLightCount} luminárias.");
             }
@@ -279,7 +279,7 @@ public partial class Main : Control
             $"{metrics.ProfessionArchetypes:N0} profissões • {metrics.BusinessArchetypes:N0} negócios\n" +
             $"{metrics.Products:N0} produtos • {metrics.Events:N0} eventos combináveis",
             12, _muted));
-        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.5.0 • PREMIUM POLISH EDITION", 11, _muted2, false));
+        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.6.0 • LIVING CITY EDITION", 11, _muted2, false));
     }
 
     private void BuildGameScreen()
@@ -651,6 +651,14 @@ public partial class Main : Control
         grid.AddChild(MakeMetricCard("DESEMPREGO", s.UnemploymentRate.ToString("P1"), _gold));
         grid.AddChild(MakeMetricCard("TESOURO", $"Cr$ {s.Treasury / 1_000_000m:N1} mi", _accent));
         _sidebar.AddChild(grid);
+
+        var living = s.LivingCity.LastMetrics;
+        _sidebar.AddChild(MakeSection("LIVING CITY"));
+        _sidebar.AddChild(MakeInfoCard(
+            $"{living.ActiveAgents:N0} ATIVOS • {living.RegionalAgents:N0} REGIONAIS",
+            $"{living.AbstractAgents:N0} abstratos • {living.InteractiveAgents:N0} interativos",
+            $"{s.LivingCity.Properties.Count:N0} imóveis • {s.LivingCity.Vehicles.Count:N0} veículos • {living.ScheduledUpdates:N0} atualizações detalhadas no último ciclo",
+            _accent));
 
         var latest = s.History.LastOrDefault();
         if (latest is not null)
@@ -1480,6 +1488,12 @@ public partial class Main : Control
             if (partner is not null)
                 lifeLine += $" • parceiro(a): {partner.Name.Split(' ')[0]}";
             box.AddChild(MakeLabel(lifeLine, 10, _muted));
+            box.AddChild(MakeLabel(
+                $"LOD {citizen.SimulationLevel} • objetivo: {citizen.CurrentGoal}",
+                10, citizen.SimulationLevel is SimulationDetailLevel.Active or SimulationDetailLevel.Interactive ? _accent : _muted2));
+            box.AddChild(MakeLabel(
+                $"próxima ação: {citizen.PlannedAction} • memórias {citizen.Memories.Count} • vínculos {citizen.Relationships.Count}",
+                9, _muted2));
 
             var stats = new HBoxContainer();
             var happy = MakeLabel($"☺ {citizen.Happiness:0}", 10, citizen.Happiness > 60 ? _success : _gold, false);
