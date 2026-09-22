@@ -6,7 +6,7 @@ namespace Metropole.Game;
 
 public partial class Main : Control
 {
-    private enum SidebarMode { Visao, Vida, Pessoas, Cidade, Carreira, Mercado, Empresas, Historico, Ajuda }
+    private enum SidebarMode { Visao, Vida, Cotidiano, Pessoas, Cidade, Carreira, Mercado, Empresas, Historico, Ajuda }
 
     private SimulationEngine? _sim;
     private CityView? _cityView;
@@ -125,6 +125,10 @@ public partial class Main : Control
                 _selectedCitizenId = person.Id;
             }
 
+            if (!_sim.PerformEverydayAction("water").Success || !_sim.PerformEverydayAction("read").Success)
+                throw new InvalidOperationException("Fluxo cotidiano 1.9 falhou.");
+            if (_sim.State.Life.Journal.Count < 2)
+                throw new InvalidOperationException("Diário 1.9 não registrou ações.");
             _sim.Study(4);
             _sim.AdvanceHours(8);
 
@@ -432,7 +436,7 @@ public partial class Main : Control
             $"{metrics.ProfessionArchetypes:N0} profissões • {metrics.BusinessArchetypes:N0} negócios\n" +
             $"{metrics.Products:N0} produtos • {metrics.Events:N0} eventos combináveis",
             12, _muted));
-        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.8.0 • LIVING STREETS", 11, _muted2, false));
+        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.9.0 • VIDA E ESCOLHAS", 11, _muted2, false));
     }
 
     private void BuildGameScreen()
@@ -559,6 +563,7 @@ public partial class Main : Control
         box.AddChild(MakeLabel("CENTRAL", 10, _muted2, false));
         AddNav(box, "Visão geral", SidebarMode.Visao, "overview");
         AddNav(box, "Vida", SidebarMode.Vida, "life");
+        AddNav(box, "Cotidiano", SidebarMode.Cotidiano, "life");
         AddNav(box, "Pessoas", SidebarMode.Pessoas, "people");
         AddNav(box, "Cidade", SidebarMode.Cidade, "city");
         AddNav(box, "Carreira", SidebarMode.Carreira, "career");
@@ -677,7 +682,7 @@ public partial class Main : Control
 
         footer.AddChild(MakeLabel(
             GraphicsQuality.UsePremium3D
-                ? "2.5D • MultiMesh • AUTO adaptativo • zoom/pan"
+                ? "3D PBR • perspectiva • TAA/MSAA • MultiMesh • AUTO adaptativo • zoom/pan"
                 : "fallback leve • dia/noite • clima • tráfego",
             10, _muted2, false));
         box.AddChild(footer);
@@ -788,6 +793,7 @@ public partial class Main : Control
         {
             case SidebarMode.Visao: BuildOverview(); break;
             case SidebarMode.Vida: BuildLife(); break;
+            case SidebarMode.Cotidiano: BuildEverydayLife(); break;
             case SidebarMode.Pessoas: BuildPeople(); break;
             case SidebarMode.Cidade: BuildCity(); break;
             case SidebarMode.Carreira: BuildCareer(); break;
@@ -1292,7 +1298,10 @@ public partial class Main : Control
             BorderWidthTop = 1,
             BorderWidthRight = 1,
             BorderWidthBottom = 1,
-            BorderColor = _line
+            BorderColor = _line,
+            ShadowColor = new Color(0.0f, 0.0f, 0.0f, 0.26f),
+            ShadowSize = 7,
+            ShadowOffset = new Vector2(0, 3)
         };
         panel.AddThemeStyleboxOverride("panel", style);
         return panel;
@@ -1781,6 +1790,8 @@ public partial class Main : Control
         box.AddChild(MakeLabel(
             $"Compatibilidade com você: {compatibility:P0} • atividade: {citizen.CurrentActivity}",
             10, compatibility >= 0.70m ? _success : compatibility >= 0.50m ? _gold : _muted));
+
+        box.AddChild(MakeLabel("Por quê: " + citizen.DecisionReason, 10, _muted));
 
         if (citizen.PlayerFamiliarity > 0m)
         {

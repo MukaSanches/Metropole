@@ -9,6 +9,7 @@ public sealed partial class SimulationEngine
         SimulationValidator.Validate(state);
         State = state;
         EnsureAaaWorldInitialized();
+        EverydayLife.Initialize(State);
     }
 
     public void AdvanceDays(int days)
@@ -34,6 +35,7 @@ public sealed partial class SimulationEngine
         ProcessPlayerSuccession(rng);
         ProcessDeepSystems(rng);
         ProcessAaaSystems(rng);
+        EverydayLife.Tick(State);
         CompactHistory();
 
         SimulationValidator.Validate(State);
@@ -455,6 +457,10 @@ public sealed partial class SimulationEngine
         var inheritance = decimal.Round(State.Player.Cash * 0.70m, 2);
         State.Treasury += State.Player.Cash - inheritance;
         State.Player.Generation++;
+        var familyJournal = State.Life.Journal;
+        var homeCare = State.Life.HomeCare;
+        State.Life = new EverydayLifeState { Journal = familyJournal, HomeCare = homeCare, LastHour = EverydayLife.Clock(State) };
+        EverydayLife.Remember(State, $"Uma nova geração começou: {State.Player.Generation}. O diário e a casa foram herdados.");
         State.Player.AgeDays = 18 * 365;
         State.Player.Cash = inheritance;
         State.Player.EmployerCompanyId = null;

@@ -15,6 +15,7 @@ public static class SaveStore
         MigrateSchema(state);
         SimulationValidator.Validate(state);
         AaaSimulationValidator.Validate(state);
+        EverydayLife.Validate(state);
         var directory = Path.GetDirectoryName(path);
         if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
 
@@ -29,6 +30,7 @@ public static class SaveStore
         ValidateSchema(validation);
         SimulationValidator.Validate(validation);
         AaaSimulationValidator.Validate(validation);
+        EverydayLife.Validate(validation);
 
         if (File.Exists(path)) File.Copy(path, backupPath, true);
         File.Move(tempPath, path, true);
@@ -55,6 +57,7 @@ public static class SaveStore
         ValidateSchema(state);
         SimulationValidator.Validate(state);
         AaaSimulationValidator.Validate(state);
+        EverydayLife.Validate(state);
         return state;
     }
 
@@ -65,6 +68,12 @@ public static class SaveStore
             state.SchemaVersion = 2;
             state.RulesVersion = "1.6.0";
             if (state.Aaa is null) state.Aaa = new AaaWorldState();
+        }
+        if (state.SchemaVersion == 2)
+        {
+            state.SchemaVersion = 3;
+            state.RulesVersion = "1.9.0";
+            EverydayLife.Initialize(state);
         }
     }
 

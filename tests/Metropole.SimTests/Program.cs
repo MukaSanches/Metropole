@@ -3,6 +3,12 @@ using Metropole.Sim;
 
 var tests = new List<(string Name, Action Run)>
 {
+    ("cotidiano: ações, dinheiro e bloqueios", TestEverydayActions),
+    ("cotidiano: rotinas e habilidades", TestLifeRoutine),
+    ("cotidiano: relógio e limites", TestLifeClock),
+    ("cotidiano: save legado real e persistência", TestLifeMigration),
+    ("cidadãos: decisões por contexto", TestCitizenDecisions),
+    ("cotidiano: determinismo e eventos", TestLifeDeterminism),
     ("catálogo mínimo e funcional", TestCatalog),
     ("geração determinística", TestGenerationDeterminism),
     ("simulação determinística", TestSimulationDeterminism),
@@ -366,9 +372,118 @@ static void TestAaaSaveMigration()
     var engine = new SimulationEngine(loaded);
 
     Check(loaded.SchemaVersion == GameState.CurrentSchemaVersion, "schema legado não foi migrado");
-    Check(loaded.RulesVersion == "1.6.0", "rules version não foi migrada");
+    Check(loaded.RulesVersion == "1.9.0", "rules version não foi migrada");
     Check(engine.State.Aaa.Initialized, "estado AAA não foi reconstruído após migração");
     Directory.Delete(dir, true);
+}
+
+static void TestEverydayActions()
+{
+    var e = new SimulationEngine(WorldGenerator.Generate(1901, "Vida"));
+    var money = e.State.TotalLiquidMoney();
+    var clock = EverydayLife.Clock(e.State);
+    var hygiene = e.State.Life.Hygiene;
+    Check(e.PerformEverydayAction("shower").Success, "banho falhou");
+    Check(EverydayLife.Clock(e.State) == clock + 1, "banho não consumiu 1h");
+    Check(e.State.Life.Hygiene > hygiene, "banho sem efeito");
+    Check(e.State.TotalLiquidMoney() == money, "atividade criou/destruiu dinheiro");
+    var cash = e.State.Player.Cash;
+    Check(!e.PerformEverydayAction("shower").Success, "intervalo ignorado");
+    Check(e.State.Player.Cash == cash && EverydayLife.Clock(e.State) == clock + 1, "ação recusada alterou mundo");
+    e.State.Player.Cash = 0;
+    Check(!e.PerformEverydayAction("cinema").Success, "cinema sem dinheiro");
+    Check(!e.PerformEverydayAction("invalid").Success, "id inválido aceito");
+    Check(!e.PerformEverydayAction("family").Success, "encontro sem parceiro aceito");
+    e.State.Weather = "Chuva";
+    Check(!e.PerformEverydayAction("walk").Success, "passeio na chuva aceito");
+}
+
+static void TestLifeRoutine()
+{
+    var e = new SimulationEngine(WorldGenerator.Generate(1902, "Rotina"));
+    var start = EverydayLife.Clock(e.State);
+    var money = e.State.TotalLiquidMoney();
+    Check(e.RunLifeRoutine("Manhã").Success, "rotina manhã falhou");
+    Check(EverydayLife.Clock(e.State) == start + 4, "duração incorreta");
+    Check(e.State.TotalLiquidMoney() == money, "rotina perdeu dinheiro");
+    Check(e.State.Life.LastCompleted.Count == 3, "rotina não fez 3 ações");
+    e.State.Life.PracticeHours["Leitura"] = 6;
+    Check(e.PerformEverydayAction("read").Success, "leitura falhou");
+    Check(e.State.Player.Skills["Leitura"] == 2, "8h não deram nível");
+    EverydayLife.Validate(e.State);
+}
+
+static void TestLifeClock()
+{
+    var e = new SimulationEngine(WorldGenerator.Generate(1903, "Relógio"));
+    var initial = e.State.Life.Hydration;
+    e.AdvanceHours(16); // 08h -> midnight, must not charge twice at daily boundary.
+    Check(e.State.Life.Hydration == initial - 16 * 1.2m, "virada do dia cobrou duas vezes");
+    e.AdvanceDays(3);
+    Check(e.State.Life.Hydration == 0, "avanço diário não atualizou necessidades");
+    for (var i = 0; i < 100; i++) EverydayLife.Remember(e.State, "Memória " + i);
+    Check(e.State.Life.Journal.Count == 64, "diário cresceu sem limite");
+    EverydayLife.Validate(e.State);
+}
+
+static void TestLifeMigration()
+{
+    var dir = Path.Combine(Path.GetTempPath(), "metropole-life-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(dir);
+    try
+    {
+        var path = Path.Combine(dir, "legacy.json");
+        var state = WorldGenerator.Generate(1904, "Legado");
+        var json = System.Text.Json.Nodes.JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(state))!.AsObject();
+        json["SchemaVersion"] = 2;
+        json["RulesVersion"] = "1.7.0";
+        json.Remove("Life");
+        File.WriteAllText(path, json.ToJsonString());
+        var loaded = SaveStore.Load(path);
+        Check(loaded.SchemaVersion == 3 && loaded.Player.Cash == state.Player.Cash, "migração perdeu estado");
+        Check(loaded.Life.Hydration == 80, "migração não inicializou necessidades");
+        var engine = new SimulationEngine(loaded);
+        Check(engine.PerformEverydayAction("read").Success, "save migrado não jogável");
+        SaveStore.Save(path, loaded);
+        var restored = SaveStore.Load(path);
+        Check(restored.Life.PracticeHours["Leitura"] == 2 && restored.Life.Journal.Count > 0, "prática/diário perdidos");
+        restored.Life.Hydration = -1;
+        var rejected = false;
+        try { SaveStore.Save(path, restored); } catch (InvalidDataException) { rejected = true; }
+        Check(rejected && SaveStore.Load(path).Life.Hydration >= 0, "save inválido sobrescreveu válido");
+    }
+    finally { Directory.Delete(dir, true); }
+}
+
+static void TestCitizenDecisions()
+{
+    var s = WorldGenerator.Generate(1905, "Decisões");
+    var c = s.Citizens.First(x => x.Alive && x.AgeYears >= 18);
+    c.EmployedCompanyId = s.Companies[0].Id;
+    c.Energy = 90; c.Stress = 10; c.Happiness = 70;
+    s.CurrentDay = 0; s.CurrentHour = 10;
+    Check(CitizenDecisions.Choose(s, c) == "Trabalhando", "compromisso profissional ignorado");
+    c.Energy = 4;
+    Check(CitizenDecisions.Choose(s, c) == "Dormindo", "exaustão ignorada");
+    c.Energy = 90; s.CurrentDay = 5;
+    Check(CitizenDecisions.Choose(s, c) != "Trabalhando", "fim de semana ignorado");
+    c.AgeDays = 12 * 365; s.CurrentDay = 0;
+    Check(CitizenDecisions.Choose(s, c) == "Estudando", "escola ignorada");
+    Check(c.DecisionReason.Length > 10, "decisão sem explicação");
+}
+
+static void TestLifeDeterminism()
+{
+    var a = new SimulationEngine(WorldGenerator.Generate(1906, "A"));
+    var b = new SimulationEngine(WorldGenerator.Generate(1906, "A"));
+    a.RunLifeRoutine("Manhã"); b.RunLifeRoutine("Manhã");
+    a.AdvanceHours(48); b.AdvanceHours(48);
+    Check(System.Text.Json.JsonSerializer.Serialize(a.State.Life) == System.Text.Json.JsonSerializer.Serialize(b.State.Life), "cotidiano não determinístico");
+    Check(a.State.Citizens.Select(c => c.CurrentActivity).SequenceEqual(b.State.Citizens.Select(c => c.CurrentActivity)), "decisões não determinísticas");
+    Check(a.State.Life.PendingEvent is not null, "convite contextual ausente");
+    Check(a.ResolveLifeEvent(false).Success && a.State.Life.PendingEvent is null, "recusa não consumiu evento");
+    a.AdvanceHours(1);
+    Check(a.State.Life.PendingEvent is null, "evento repetiu na mesma semana");
 }
 
 static void Check(bool condition, string message)
