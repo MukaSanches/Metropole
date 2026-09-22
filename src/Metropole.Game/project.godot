@@ -1,11 +1,11 @@
 ; Engine configuration file.
-; METRÓPOLE ∞ 1.5.0
+; METRÓPOLE ∞ 1.6.0
 config_version=5
 
 [application]
 config/name="METRÓPOLE ∞"
 config/description="Simulador sistêmico de sociedade e economia"
-config/version="1.5.0"
+config/version="1.6.0"
 run/main_scene="res://Main.tscn"
 config/features=PackedStringArray("4.7", "C#")
 config/icon="res://assets/ui/app_icon.svg"

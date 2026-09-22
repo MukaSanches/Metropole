@@ -8,6 +8,7 @@ public sealed partial class SimulationEngine
     {
         SimulationValidator.Validate(state);
         State = state;
+        LivingCitySystems.EnsureInitialized(State);
     }
 
     public void AdvanceDays(int days)
@@ -32,6 +33,7 @@ public sealed partial class SimulationEngine
         ProcessCompanyBirths(rng);
         ProcessPlayerSuccession(rng);
         ProcessDeepSystems(rng);
+        LivingCitySystems.AdvanceDay(State);
         CompactHistory();
 
         SimulationValidator.Validate(State);

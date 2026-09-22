@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.6.0 - 2026-09-22
+
+### Living City
+- quatro níveis persistentes de detalhe da população: abstrato, regional, ativo e interativo;
+- necessidades ampliadas: sede, higiene, banheiro, social, conforto, segurança e saúde;
+- personalidade expandida e determinística por cidadão;
+- objetivos e ações planejadas a partir das necessidades;
+- catálogo data-driven de affordances para objetos e serviços;
+- memória social com importância e decaimento;
+- relações multidimensionais: familiaridade, amizade, confiança, atração, respeito, ressentimento e romance;
+- vínculos familiares derivados dos domicílios;
+- imóveis persistentes por household;
+- veículos persistentes vinculados a cidadãos e destinos de trabalho;
+- regiões com métricas de população, tráfego e atividade econômica;
+- índice espacial por distrito e scheduler com orçamento rotativo.
+
+### Compatibilidade e arquitetura
+- a camada Living City permanece separada da representação visual;
+- saves antigos inicializam os novos dados sem fallback destrutivo;
+- o núcleo existente de economia, empresas, clima, carreira e rendering premium foi preservado;
+- referências GPL/AGPL permanecem somente como estudo arquitetural; nenhum código copyleft foi incorporado ao núcleo.
+
+### QA
+- testes novos cobrem LOD, affordances, scheduler, regiões, relações, propriedades, veículos e persistência;
+- o pipeline Windows continua exigindo build .NET, testes, import Godot, export, validações premium/fallback, smoke test, instalação silenciosa e SHA-256.
+
 ## 1.5.0 - 2026-09-21
 
 ### Acabamento 3D

@@ -13,6 +13,8 @@ public partial class Main : Control
     private PremiumCityView? _premiumCityView;
     private GameAudio? _audio;
     private Label? _graphicsBadge;
+    private PanelContainer? _debugOverlay;
+    private Label? _debugLabel;
     private VBoxContainer? _sidebar;
     private Label? _dateLabel;
     private Label? _cashLabel;
@@ -109,6 +111,12 @@ public partial class Main : Control
             if (_audio is null || _audio.LoadedAssetCount < 8)
                 throw new InvalidOperationException($"Audio CC0 incompleto: {_audio?.LoadedAssetCount ?? 0}/8 assets carregados.");
 
+            var living = _sim.State.LivingCity;
+            if (!living.Initialized || living.Properties.Count < 100 || living.Vehicles.Count < 20)
+                throw new InvalidOperationException($"Living City incompleto: initialized={living.Initialized} properties={living.Properties.Count} vehicles={living.Vehicles.Count}.");
+            if (living.Regions.Count != _sim.State.Districts.Count)
+                throw new InvalidOperationException($"Living City regiões inválidas: {living.Regions.Count}/{_sim.State.Districts.Count}.");
+
             if (GraphicsQuality.UsePremium3D)
             {
                 if (_premiumCityView is null || _premiumCityView.DetailedAssetCount < 20)
@@ -116,7 +124,7 @@ public partial class Main : Control
                 if (_premiumCityView.AnimatedProxyCount < 1)
                     throw new InvalidOperationException("Nenhum personagem CC0 com AnimationPlayer foi validado.");
                 if (!_premiumCityView.PolishReady)
-                    throw new InvalidOperationException("Camada de polimento 1.5 não foi inicializada.");
+                    throw new InvalidOperationException("Camada de polimento premium não foi inicializada.");
                 if (_premiumCityView.StreetLightCount < 12)
                     throw new InvalidOperationException($"Iluminação urbana incompleta: {_premiumCityView.StreetLightCount} luminárias.");
             }
@@ -147,7 +155,12 @@ public partial class Main : Control
     {
         if (@event is not InputEventKey key || !key.Pressed || key.Echo) return;
 
-        if (key.Keycode == Key.S && key.CtrlPressed && _sim is not null)
+        if (key.Keycode == Key.F1 && _sim is not null)
+        {
+            ToggleDebugOverlay();
+            GetViewport().SetInputAsHandled();
+        }
+        else if (key.Keycode == Key.S && key.CtrlPressed && _sim is not null)
         {
             SaveGame();
             GetViewport().SetInputAsHandled();
@@ -165,6 +178,8 @@ public partial class Main : Control
         _sim = null;
         _speed = 0;
         _tickAccumulator = 0;
+        _debugOverlay = null;
+        _debugLabel = null;
         _nav.Clear();
         ClearNode(this);
         AddBackground();
@@ -279,7 +294,7 @@ public partial class Main : Control
             $"{metrics.ProfessionArchetypes:N0} profissões • {metrics.BusinessArchetypes:N0} negócios\n" +
             $"{metrics.Products:N0} produtos • {metrics.Events:N0} eventos combináveis",
             12, _muted));
-        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.5.0 • PREMIUM POLISH EDITION", 11, _muted2, false));
+        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.6.0 • LIVING CITY EDITION", 11, _muted2, false));
     }
 
     private void BuildGameScreen()
@@ -312,6 +327,7 @@ public partial class Main : Control
         body.AddChild(BuildSidebar());
 
         root.AddChild(BuildStatusBar());
+        BuildDebugOverlay();
         RefreshAll();
     }
 
@@ -345,8 +361,9 @@ public partial class Main : Control
         controls.AddChild(MakeSpeedButton("Ⅱ", 0));
         controls.AddChild(MakeSpeedButton("1×", 1));
         controls.AddChild(MakeSpeedButton("2×", 2));
-        controls.AddChild(MakeSpeedButton("4×", 4));
-        controls.AddChild(MakeSpeedButton("8×", 8));
+        controls.AddChild(MakeSpeedButton("5×", 5));
+        controls.AddChild(MakeSpeedButton("10×", 10));
+        controls.AddChild(MakeSpeedButton("50×", 50));
         bar.AddChild(controls);
 
         var day = MakeButton("+1 DIA", false);
@@ -546,8 +563,59 @@ public partial class Main : Control
         _statusLabel = MakeLabel("Cidade pronta.", 10, _muted);
         _statusLabel.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         row.AddChild(_statusLabel);
-        row.AddChild(MakeLabel("Ctrl+S salvar • Esc menu", 10, _muted2, false));
+        row.AddChild(MakeLabel("F1 debug • Ctrl+S salvar • Esc menu", 10, _muted2, false));
         return panel;
+    }
+
+    private void BuildDebugOverlay()
+    {
+        _debugOverlay = MakePanel(new Color(0.02f, 0.04f, 0.06f, 0.96f), 11);
+        _debugOverlay.AnchorLeft = 1f;
+        _debugOverlay.AnchorRight = 1f;
+        _debugOverlay.AnchorTop = 0f;
+        _debugOverlay.AnchorBottom = 0f;
+        _debugOverlay.OffsetLeft = -355f;
+        _debugOverlay.OffsetRight = -18f;
+        _debugOverlay.OffsetTop = 98f;
+        _debugOverlay.OffsetBottom = 310f;
+        _debugOverlay.ZIndex = 100;
+        _debugOverlay.MouseFilter = MouseFilterEnum.Ignore;
+        _debugOverlay.Visible = false;
+
+        var box = new VBoxContainer();
+        box.AddThemeConstantOverride("separation", 5);
+        _debugOverlay.AddChild(box);
+        box.AddChild(MakeLabel("F1 • SIMULATION DEBUG", 12, _accent, false));
+        _debugLabel = MakeLabel("", 10, _text);
+        box.AddChild(_debugLabel);
+        AddChild(_debugOverlay);
+        UpdateDebugOverlay();
+    }
+
+    private void ToggleDebugOverlay()
+    {
+        if (_debugOverlay is null) return;
+        _debugOverlay.Visible = !_debugOverlay.Visible;
+        UpdateDebugOverlay();
+    }
+
+    private void UpdateDebugOverlay()
+    {
+        if (_debugLabel is null || _sim is null) return;
+
+        var s = _sim.State;
+        var m = s.LivingCity.LastMetrics;
+        var region = s.LivingCity.Regions.FirstOrDefault(r => r.DistrictId == s.Player.DistrictId);
+        var managedMb = GC.GetTotalMemory(false) / (1024d * 1024d);
+
+        _debugLabel.Text =
+            $"FPS {Engine.GetFramesPerSecond():0} • speed {_speed:0}×\n" +
+            $"LOD A {m.ActiveAgents:N0} • R {m.RegionalAgents:N0} • X {m.AbstractAgents:N0} • I {m.InteractiveAgents:N0}\n" +
+            $"scheduler {m.ScheduledUpdates:N0} • tick {s.LivingCity.Tick:N0}\n" +
+            $"veículos {s.LivingCity.Vehicles.Count:N0} • em rota {m.VehiclesInTransit:N0}\n" +
+            $"imóveis {s.LivingCity.Properties.Count:N0} • eventos {s.LivingCity.Events.Count:N0}\n" +
+            $"região {s.Player.DistrictId}: pop {region?.Population ?? 0:N0} • tráfego {region?.TrafficLoad ?? 0m:P0}\n" +
+            $"managed memory {managedMb:N1} MB";
     }
 
     private void AddNav(VBoxContainer box, string text, SidebarMode mode, string icon)
@@ -606,6 +674,7 @@ public partial class Main : Control
         }
         UpdateNavState();
         RefreshSidebar();
+        UpdateDebugOverlay();
     }
 
     private void RefreshSidebar()
@@ -651,6 +720,14 @@ public partial class Main : Control
         grid.AddChild(MakeMetricCard("DESEMPREGO", s.UnemploymentRate.ToString("P1"), _gold));
         grid.AddChild(MakeMetricCard("TESOURO", $"Cr$ {s.Treasury / 1_000_000m:N1} mi", _accent));
         _sidebar.AddChild(grid);
+
+        var living = s.LivingCity.LastMetrics;
+        _sidebar.AddChild(MakeSection("LIVING CITY"));
+        _sidebar.AddChild(MakeInfoCard(
+            $"{living.ActiveAgents:N0} ATIVOS • {living.RegionalAgents:N0} REGIONAIS",
+            $"{living.AbstractAgents:N0} abstratos • {living.InteractiveAgents:N0} interativos",
+            $"{s.LivingCity.Properties.Count:N0} imóveis • {s.LivingCity.Vehicles.Count:N0} veículos • {living.ScheduledUpdates:N0} atualizações detalhadas no último ciclo",
+            _accent));
 
         var latest = s.History.LastOrDefault();
         if (latest is not null)
@@ -1480,6 +1557,12 @@ public partial class Main : Control
             if (partner is not null)
                 lifeLine += $" • parceiro(a): {partner.Name.Split(' ')[0]}";
             box.AddChild(MakeLabel(lifeLine, 10, _muted));
+            box.AddChild(MakeLabel(
+                $"LOD {citizen.SimulationLevel} • objetivo: {citizen.CurrentGoal}",
+                10, citizen.SimulationLevel is SimulationDetailLevel.Active or SimulationDetailLevel.Interactive ? _accent : _muted2));
+            box.AddChild(MakeLabel(
+                $"próxima ação: {citizen.PlannedAction} • memórias {citizen.Memories.Count} • vínculos {citizen.Relationships.Count}",
+                9, _muted2));
 
             var stats = new HBoxContainer();
             var happy = MakeLabel($"☺ {citizen.Happiness:0}", 10, citizen.Happiness > 60 ? _success : _gold, false);

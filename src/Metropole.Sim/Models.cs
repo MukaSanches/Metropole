@@ -4,7 +4,7 @@ public sealed class GameState
 {
     public const int CurrentSchemaVersion = 1;
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;
-    public string RulesVersion { get; set; } = "1.2.0";
+    public string RulesVersion { get; set; } = "1.6.0";
     public long Seed { get; set; }
     public int CurrentDay { get; set; }
     public int CurrentHour { get; set; } = 8;
@@ -18,6 +18,7 @@ public sealed class GameState
     public List<CompanyState> Companies { get; set; } = [];
     public List<ProductMarketState> Markets { get; set; } = [];
     public List<HistoryEvent> History { get; set; } = [];
+    public LivingCityState LivingCity { get; set; } = new();
     public int NextCitizenId { get; set; } = 1;
     public int NextCompanyId { get; set; } = 1;
 
@@ -110,6 +111,21 @@ public sealed class CitizenState
     public int? PartnerCitizenId { get; set; }
     public int LastCareerChangeDay { get; set; }
     public bool Alive { get; set; } = true;
+
+    // Living City 1.6: dados persistentes independentes da representação visual.
+    public bool LivingCityInitialized { get; set; }
+    public int HomeDistrictId { get; set; }
+    public int? TargetDistrictId { get; set; }
+    public SimulationDetailLevel SimulationLevel { get; set; } = SimulationDetailLevel.Abstract;
+    public CitizenNeedsState Needs { get; set; } = new();
+    public CitizenPersonalityState Personality { get; set; } = new();
+    public List<CitizenMemoryState> Memories { get; set; } = [];
+    public Dictionary<int, CitizenRelationshipState> Relationships { get; set; } = new();
+    public List<int> ParentCitizenIds { get; set; } = [];
+    public List<int> ChildCitizenIds { get; set; } = [];
+    public string CurrentGoal { get; set; } = "Manter rotina";
+    public string PlannedAction { get; set; } = "Continuar rotina";
+
     public int AgeYears => AgeDays / 365;
 }
 
@@ -186,6 +202,144 @@ public sealed class HistoryEvent
     public string Cause { get; set; } = "";
     public int? EntityId { get; set; }
 }
+
+public enum SimulationDetailLevel
+{
+    Abstract = 0,
+    Regional = 1,
+    Active = 2,
+    Interactive = 3
+}
+
+public sealed class CitizenNeedsState
+{
+    public decimal Thirst { get; set; } = 12m;
+    public decimal Hygiene { get; set; } = 82m;
+    public decimal Bathroom { get; set; } = 10m;
+    public decimal Social { get; set; } = 58m;
+    public decimal Comfort { get; set; } = 68m;
+    public decimal Safety { get; set; } = 72m;
+    public decimal Health { get; set; } = 86m;
+}
+
+public sealed class CitizenPersonalityState
+{
+    public decimal Extroversion { get; set; } = 0.5m;
+    public decimal Responsibility { get; set; } = 0.5m;
+    public decimal Aggressiveness { get; set; } = 0.2m;
+    public decimal Generosity { get; set; } = 0.5m;
+    public decimal Romanticism { get; set; } = 0.5m;
+    public decimal Courage { get; set; } = 0.5m;
+    public decimal Curiosity { get; set; } = 0.5m;
+    public decimal Patience { get; set; } = 0.5m;
+}
+
+public sealed class CitizenMemoryState
+{
+    public string EventType { get; set; } = "";
+    public List<int> Participants { get; set; } = [];
+    public int Day { get; set; }
+    public decimal EmotionalWeight { get; set; }
+    public decimal Importance { get; set; }
+    public decimal Decay { get; set; } = 0.985m;
+    public string Summary { get; set; } = "";
+}
+
+public sealed class CitizenRelationshipState
+{
+    public decimal Familiarity { get; set; }
+    public decimal Friendship { get; set; }
+    public decimal Trust { get; set; }
+    public decimal Attraction { get; set; }
+    public decimal Respect { get; set; }
+    public decimal Resentment { get; set; }
+    public decimal Romance { get; set; }
+    public int LastInteractionDay { get; set; }
+}
+
+public sealed class LivingCityState
+{
+    public const int CurrentSimulationVersion = 1;
+    public int SimulationVersion { get; set; } = CurrentSimulationVersion;
+    public bool Initialized { get; set; }
+    public long Tick { get; set; }
+    public int SchedulerCursor { get; set; }
+    public int? FocusCitizenId { get; set; }
+    public int NextPropertyId { get; set; } = 1;
+    public int NextVehicleId { get; set; } = 1;
+    public List<PropertyState> Properties { get; set; } = [];
+    public List<VehicleState> Vehicles { get; set; } = [];
+    public List<WorldRegionState> Regions { get; set; } = [];
+    public List<LivingCityEventRecord> Events { get; set; } = [];
+    public PopulationSimulationMetrics LastMetrics { get; set; } = new();
+}
+
+public sealed class PropertyState
+{
+    public int Id { get; set; }
+    public int DistrictId { get; set; }
+    public int HouseholdId { get; set; }
+    public int? OwnerCitizenId { get; set; }
+    public string Kind { get; set; } = "Residência";
+    public decimal Value { get; set; }
+    public decimal Rent { get; set; }
+    public decimal Condition { get; set; } = 0.80m;
+    public int Rooms { get; set; } = 3;
+    public List<int> ResidentCitizenIds { get; set; } = [];
+}
+
+public sealed class VehicleState
+{
+    public int Id { get; set; }
+    public int OwnerCitizenId { get; set; }
+    public string Kind { get; set; } = "Carro";
+    public int CurrentDistrictId { get; set; }
+    public int TargetDistrictId { get; set; }
+    public decimal RouteProgress { get; set; }
+    public decimal Condition { get; set; } = 0.90m;
+    public string Status { get; set; } = "Estacionado";
+}
+
+public sealed class WorldRegionState
+{
+    public int DistrictId { get; set; }
+    public int Population { get; set; }
+    public int ActiveAgents { get; set; }
+    public int RegionalAgents { get; set; }
+    public int AbstractAgents { get; set; }
+    public int Vehicles { get; set; }
+    public decimal TrafficLoad { get; set; }
+    public decimal EconomicActivity { get; set; }
+}
+
+public sealed class LivingCityEventRecord
+{
+    public long Tick { get; set; }
+    public int Day { get; set; }
+    public string Kind { get; set; } = "";
+    public string Summary { get; set; } = "";
+    public int? EntityId { get; set; }
+}
+
+public sealed class PopulationSimulationMetrics
+{
+    public int AbstractAgents { get; set; }
+    public int RegionalAgents { get; set; }
+    public int ActiveAgents { get; set; }
+    public int InteractiveAgents { get; set; }
+    public int ScheduledUpdates { get; set; }
+    public int VehiclesInTransit { get; set; }
+}
+
+public sealed record AffordanceDefinition(
+    string ObjectType,
+    string Action,
+    string SatisfiesNeed,
+    decimal Effect,
+    int DurationMinutes,
+    decimal Cost,
+    decimal Risk,
+    int Priority);
 
 public sealed record SectorDefinition(string Name, string ProductFamily, decimal BasePrice, decimal Productivity);
 public sealed record ProfessionDefinition(string Occupation, string Specialization, string Sector, decimal WageFactor);
