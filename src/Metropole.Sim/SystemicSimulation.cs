@@ -86,17 +86,46 @@ public static class SystemicBootstrap
 
     private static void SynchronizePartnerRelations(GameState state)
     {
+        var relationMap = state.Relationships.ToDictionary(
+            r => RelationKey(r.CitizenAId, r.CitizenBId),
+            r => r);
+
         foreach (var citizen in state.Citizens.Where(c => c.Alive && c.PartnerCitizenId is not null))
         {
             var partnerId = citizen.PartnerCitizenId!.Value;
             if (citizen.Id >= partnerId) continue;
-            var relation = SystemicSimulation.GetOrCreateRelation(state, citizen.Id, partnerId);
+
+            var a = Math.Min(citizen.Id, partnerId);
+            var b = Math.Max(citizen.Id, partnerId);
+            var key = RelationKey(a, b);
+            if (!relationMap.TryGetValue(key, out var relation))
+            {
+                relation = new SocialRelationState
+                {
+                    CitizenAId = a,
+                    CitizenBId = b,
+                    Familiarity = 0.08m,
+                    Friendship = 0.02m,
+                    Trust = 0.04m,
+                    Respect = 0.04m
+                };
+                state.Relationships.Add(relation);
+                relationMap[key] = relation;
+            }
+
             relation.Familiarity = Math.Max(relation.Familiarity, 0.75m);
             relation.Friendship = Math.Max(relation.Friendship, 0.58m);
             relation.Trust = Math.Max(relation.Trust, 0.55m);
             relation.Attraction = Math.Max(relation.Attraction, 0.60m);
             relation.Romance = Math.Max(relation.Romance, 0.68m);
         }
+    }
+
+    private static long RelationKey(int citizenAId, int citizenBId)
+    {
+        var a = Math.Min(citizenAId, citizenBId);
+        var b = Math.Max(citizenAId, citizenBId);
+        return ((long)a << 32) | (uint)b;
     }
 }
 
@@ -557,7 +586,8 @@ public sealed partial class SimulationEngine
     private void ProcessSystemicSystems(DeterministicRng rng)
     {
         SystemicBootstrap.Ensure(State);
-        SystemicSimulation.ReclassifyPopulation(State);
+        if (State.Systemic.LastReclassificationDay != State.CurrentDay)
+            SystemicSimulation.ReclassifyPopulation(State);
         SystemicSimulation.ProcessDailySocial(State, rng);
 
         if (State.CurrentDay % 7 == 0)
