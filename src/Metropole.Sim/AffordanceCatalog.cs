@@ -30,12 +30,25 @@ public static class AffordanceCatalog
         Definitions.Where(x => x.SatisfiesNeed.Equals(need, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(x => x.NeedRelief).ToArray();
 
-    public static InteractionAffordanceDefinition? BestForNeed(string need, decimal availableCash) =>
-        Definitions
-            .Where(x => x.SatisfiesNeed.Equals(need, StringComparison.OrdinalIgnoreCase) && x.Cost <= availableCash)
-            .OrderByDescending(x => x.NeedRelief / Math.Max(1, x.DurationHours))
-            .ThenBy(x => x.Cost)
-            .FirstOrDefault();
+    public static InteractionAffordanceDefinition? BestForNeed(string need, decimal availableCash)
+    {
+        InteractionAffordanceDefinition? best = null;
+        decimal bestScore = decimal.MinValue;
+
+        foreach (var item in Definitions)
+        {
+            if (!item.SatisfiesNeed.Equals(need, StringComparison.OrdinalIgnoreCase) || item.Cost > availableCash)
+                continue;
+
+            var score = item.NeedRelief / Math.Max(1, item.DurationHours);
+            if (score < bestScore) continue;
+            if (score == bestScore && best is not null && item.Cost >= best.Cost) continue;
+            best = item;
+            bestScore = score;
+        }
+
+        return best;
+    }
 }
 
 public static class AaaScaleProbe

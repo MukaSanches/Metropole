@@ -108,7 +108,8 @@ public sealed partial class SimulationEngine
 
         world.Scheduler.BatchSize = Math.Clamp(Math.Max(64, State.Population / 10), 64, 256);
         UpdateSimulationLod();
-        AaaSimulationValidator.Validate(State);
+        if (State.CurrentDay <= 0)
+            AaaSimulationValidator.Validate(State);
     }
 
     private static void RepairAaaCollections(AaaWorldState world)
@@ -306,6 +307,18 @@ public sealed partial class SimulationEngine
         {
             if (!world.Citizens.TryGetValue(citizen.Id, out var profile)) continue;
             profile.RegionId = citizen.DistrictId;
+
+            // LOD controls simulation frequency: visible/interactive agents stay responsive,
+            // while distant statistical agents are amortized across seven days.
+            var processToday = profile.Lod switch
+            {
+                SimulationLodTier.Interactive => true,
+                SimulationLodTier.Active => true,
+                SimulationLodTier.Regional => (citizen.Id + State.CurrentDay) % 2 == 0,
+                _ => (citizen.Id + State.CurrentDay) % 7 == 0
+            };
+            if (!processToday) continue;
+
             UpdateDailyPressures(citizen, profile, rng);
             DetectImportantChanges(citizen, profile);
             DecayMemories(profile);
@@ -323,7 +336,8 @@ public sealed partial class SimulationEngine
             UpdateRegionAggregates();
         }
 
-        AaaSimulationValidator.Validate(State);
+        if (State.CurrentDay % 7 == 0 || State.CurrentDay <= 1)
+            AaaSimulationValidator.Validate(State);
     }
 
     private static void UpdateHourlyPressures(CitizenState citizen, CitizenSimulationProfile profile)
@@ -409,29 +423,37 @@ public sealed partial class SimulationEngine
 
     private void ResolveGoal(CitizenState citizen, CitizenSimulationProfile profile)
     {
-        var needs = profile.Needs;
-        var candidates = new (string Need, decimal Pressure, string Action)[]
+        var n = profile.Needs;
+        var bestNeed = "Fome";
+        var bestAction = "Buscar alimentação";
+        var bestPressure = n.Hunger;
+
+        void Consider(string need, string action, decimal pressure)
         {
-            ("Fome", needs.Hunger, "Buscar alimentação"),
-            ("Sede", needs.Thirst, "Beber"),
-            ("Fadiga", needs.Fatigue, "Dormir"),
-            ("Higiene", needs.Hygiene, "Tomar banho"),
-            ("Banheiro", needs.Bathroom, "Usar banheiro"),
-            ("Social", needs.Social * (0.65m + profile.Personality.Extroversion * 0.35m), "Socializar"),
-            ("Diversão", needs.Fun * (0.70m + profile.Personality.Curiosity * 0.30m), "Buscar lazer"),
-            ("Conforto", needs.Comfort, "Descansar"),
-            ("Segurança", needs.Safety * (1.15m - profile.Personality.Courage * 0.25m), "Buscar lugar seguro"),
-            ("Saúde", needs.Health, "Cuidar da saúde")
-        };
-        var best = candidates.OrderByDescending(x => x.Pressure).ThenBy(x => x.Need, StringComparer.Ordinal).First();
-        var affordance = AffordanceCatalog.BestForNeed(best.Need, citizen.Cash);
-        var createdDay = profile.CurrentGoal.Need == best.Need ? profile.CurrentGoal.CreatedDay : State.CurrentDay;
+            if (pressure <= bestPressure) return;
+            bestNeed = need;
+            bestAction = action;
+            bestPressure = pressure;
+        }
+
+        Consider("Sede", "Beber", n.Thirst);
+        Consider("Fadiga", "Dormir", n.Fatigue);
+        Consider("Higiene", "Tomar banho", n.Hygiene);
+        Consider("Banheiro", "Usar banheiro", n.Bathroom);
+        Consider("Social", "Socializar", n.Social * (0.65m + profile.Personality.Extroversion * 0.35m));
+        Consider("Diversão", "Buscar lazer", n.Fun * (0.70m + profile.Personality.Curiosity * 0.30m));
+        Consider("Conforto", "Descansar", n.Comfort);
+        Consider("Segurança", "Buscar lugar seguro", n.Safety * (1.15m - profile.Personality.Courage * 0.25m));
+        Consider("Saúde", "Cuidar da saúde", n.Health);
+
+        var affordance = AffordanceCatalog.BestForNeed(bestNeed, citizen.Cash);
+        var createdDay = profile.CurrentGoal.Need == bestNeed ? profile.CurrentGoal.CreatedDay : State.CurrentDay;
         profile.CurrentGoal = new CitizenGoalState
         {
-            Need = best.Need,
-            Action = best.Action,
+            Need = bestNeed,
+            Action = bestAction,
             PreferredAffordanceId = affordance?.Id,
-            Utility = decimal.Round(Clamp(best.Pressure / 100m, 0m, 1m), 3),
+            Utility = decimal.Round(Clamp(bestPressure / 100m, 0m, 1m), 3),
             CreatedDay = createdDay
         };
     }

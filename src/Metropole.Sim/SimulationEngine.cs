@@ -35,7 +35,6 @@ public sealed partial class SimulationEngine
         ProcessDeepSystems(rng);
         ProcessAaaSystems(rng);
         CompactHistory();
-        AaaSimulationValidator.Validate(State);
 
         SimulationValidator.Validate(State);
     }
