@@ -1,10 +1,10 @@
 namespace Metropole.Sim;
 
-public sealed class GameState
+public sealed partial class GameState
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;
-    public string RulesVersion { get; set; } = "1.2.0";
+    public string RulesVersion { get; set; } = "1.6.0";
     public long Seed { get; set; }
     public int CurrentDay { get; set; }
     public int CurrentHour { get; set; } = 8;
@@ -38,7 +38,7 @@ public sealed class GameState
     }
 }
 
-public sealed class PlayerState
+public sealed partial class PlayerState
 {
     public string Name { get; set; } = "Cidadão";
     public int Generation { get; set; } = 1;
@@ -86,7 +86,7 @@ public sealed class DistrictState
     public decimal SafetyIndex { get; set; } = 1m;
 }
 
-public sealed class CitizenState
+public sealed partial class CitizenState
 {
     public int Id { get; set; }
     public string Name { get; set; } = "";

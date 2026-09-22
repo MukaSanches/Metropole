@@ -1,5 +1,10 @@
 # Third-party notices
 
+## METRÓPOLE 1.6 systemic core
+
+A versão 1.6 não incorpora código de novos projetos third-party ao núcleo sistêmico. Population LOD, Utility AI, affordances, relações, memórias e moradias foram implementados sobre o código C# existente do projeto.
+
+
 ## Godot Engine
 
 METRÓPOLE ∞ usa Godot Engine.
