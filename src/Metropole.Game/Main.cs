@@ -100,6 +100,16 @@ public partial class Main : Control
             _sim.Study(4);
             _sim.AdvanceHours(30);
 
+            var systemic = _sim.GetSystemicSnapshot();
+            if (systemic.Population != _sim.State.Population)
+                throw new InvalidOperationException("Snapshot sistêmico não corresponde à população.");
+            if (systemic.Interactive <= 0 || systemic.Interactive > 24)
+                throw new InvalidOperationException($"LOD interativo inválido: {systemic.Interactive}.");
+            if (systemic.Residences <= 0 || systemic.Relationships <= 0)
+                throw new InvalidOperationException("Camada sistêmica 1.6 não produziu moradias/relações.");
+            if (_sim.GetPlayerAffordances().Count < 5)
+                throw new InvalidOperationException("Catálogo de affordances 1.6 incompleto.");
+
             foreach (var mode in Enum.GetValues<SidebarMode>())
             {
                 _mode = mode;
@@ -121,7 +131,7 @@ public partial class Main : Control
                     throw new InvalidOperationException($"Iluminação urbana incompleta: {_premiumCityView.StreetLightCount} luminárias.");
             }
 
-            GD.Print($"METROPOLE_UI_VALIDATION_OK day={_sim.State.CurrentDay} hour={_sim.State.CurrentHour} companies={_sim.State.OpenCompanies} population={_sim.State.Population} audio={_audio.LoadedAssetCount} detailed={_premiumCityView?.DetailedAssetCount ?? 0} animated={_premiumCityView?.AnimatedProxyCount ?? 0} polish={_premiumCityView?.PolishReady ?? false} lamps={_premiumCityView?.StreetLightCount ?? 0}");
+            GD.Print($"METROPOLE_UI_VALIDATION_OK day={_sim.State.CurrentDay} hour={_sim.State.CurrentHour} companies={_sim.State.OpenCompanies} population={_sim.State.Population} interactive={systemic.Interactive} active={systemic.Active} relations={systemic.Relationships} homes={systemic.Residences} audio={_audio.LoadedAssetCount} detailed={_premiumCityView?.DetailedAssetCount ?? 0} animated={_premiumCityView?.AnimatedProxyCount ?? 0} polish={_premiumCityView?.PolishReady ?? false} lamps={_premiumCityView?.StreetLightCount ?? 0}");
             GetTree().Quit(0);
         }
         catch (Exception ex)
@@ -279,7 +289,7 @@ public partial class Main : Control
             $"{metrics.ProfessionArchetypes:N0} profissões • {metrics.BusinessArchetypes:N0} negócios\n" +
             $"{metrics.Products:N0} produtos • {metrics.Events:N0} eventos combináveis",
             12, _muted));
-        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.5.0 • PREMIUM POLISH EDITION", 11, _muted2, false));
+        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.6.0 • SYSTEMIC LIFE EDITION", 11, _muted2, false));
     }
 
     private void BuildGameScreen()
@@ -970,6 +980,7 @@ public partial class Main : Control
         _sidebar.AddChild(MakeGuide("05", "ABRA UMA EMPRESA", "Com Cr$ 5.000, escolha um setor e passe a controlar caixa e vagas."));
         _sidebar.AddChild(MakeGuide("06", "ACELERE O TEMPO", "Use 1× a 8× para observar ciclos, falências e novas empresas."));
         _sidebar.AddChild(MakeGuide("07", "SALVE", "Ctrl+S salva. O jogo cria backup antes de substituir o save válido."));
+        _sidebar.AddChild(MakeGuide("08", "OBSERVE A VIDA SISTÊMICA", "Cidadãos usam Utility AI, necessidades, relações e níveis de detalhe diferentes sem deixar de existir fora da câmera."));
     }
 
     private void AdvanceOneDay(bool manual)
@@ -1312,7 +1323,7 @@ public partial class Main : Control
         _sidebar.AddChild(MakeInfoCard(
             $"{s.CurrentHour:00}:00 • {s.Weather.ToUpperInvariant()}",
             p.CurrentActivity,
-            $"{district.Name} • {s.TemperatureC:0}°C • {p.AgeYears} anos • geração {p.Generation}",
+            $"{district.Name} • {s.TemperatureC:0}°C • {p.AgeYears} anos • geração {p.Generation}\nObjetivo atual: {p.CurrentGoal}",
             _accent));
 
         var needs = MakePanel(_panel2, 10);
@@ -1327,6 +1338,9 @@ public partial class Main : Control
         nbox.AddChild(MakeProgressStat("Felicidade", p.Happiness, p.Happiness < 35 ? _danger : _success));
         nbox.AddChild(MakeProgressStat("Vida social", p.Social, p.Social < 30 ? _gold : _accent));
         nbox.AddChild(MakeProgressStat("Condicionamento", p.Fitness, _success));
+        nbox.AddChild(MakeProgressStat("Higiene", p.Hygiene, p.Hygiene < 30 ? _danger : _accent));
+        nbox.AddChild(MakeProgressStat("Diversão", p.Fun, p.Fun < 25 ? _gold : _success));
+        nbox.AddChild(MakeProgressStat("Conforto", p.Comfort, p.Comfort < 25 ? _gold : _accent));
         _sidebar.AddChild(needs);
 
         var grid = new GridContainer { Columns = 2 };
@@ -1395,6 +1409,28 @@ public partial class Main : Control
         };
         actionRow.AddChild(exercise);
         _sidebar.AddChild(actionRow);
+
+        _sidebar.AddChild(MakeSection("AÇÕES CONTEXTUAIS • AFFORDANCES"));
+        foreach (var affordance in _sim.GetPlayerAffordances().Take(6))
+        {
+            var actionId = affordance.Id;
+            var action = MakeButton($"{affordance.Label.ToUpperInvariant()} • {affordance.Category}", false);
+            action.TooltipText = affordance.EffectSummary;
+            action.Pressed += () =>
+            {
+                var ok = _sim.PerformPlayerAffordance(actionId);
+                SetStatus(ok ? affordance.EffectSummary : "A ação não pôde ser executada neste momento.");
+                RefreshAll();
+            };
+            _sidebar.AddChild(action);
+        }
+
+        var lod = _sim.GetSystemicSnapshot();
+        _sidebar.AddChild(MakeInfoCard(
+            "SIMULAÇÃO SISTÊMICA 1.6",
+            $"{lod.Interactive} interativos • {lod.Active} ativos • {lod.Regional} regionais",
+            $"{lod.Abstract} abstratos • {lod.Relationships:N0} relações • {lod.Residences:N0} moradias • decisões {_sim.State.Systemic.TotalCitizenDecisions:N0}",
+            _accent));
 
         _sidebar.AddChild(MakeSection("CONTEXTO DE VIDA"));
         var job = p.EmployerCompanyId is int employerId
@@ -1471,8 +1507,9 @@ public partial class Main : Control
             box.AddChild(top);
 
             box.AddChild(MakeLabel(
-                $"{citizen.AgeYears} anos • {EducationName(citizen.EducationLevel)} • {PersonalityName(citizen)}",
+                $"{citizen.AgeYears} anos • {EducationName(citizen.EducationLevel)} • {PersonalityName(citizen)} • {citizen.SimulationDetail}",
                 10, _muted));
+            box.AddChild(MakeLabel($"Objetivo: {citizen.CurrentGoal}", 10, _muted2));
 
             var lifeLine = employer is null
                 ? "Sem emprego"
