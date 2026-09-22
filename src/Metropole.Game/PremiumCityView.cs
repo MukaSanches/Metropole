@@ -559,7 +559,9 @@ public partial class PremiumCityView : Control
     {
         if (_worldRoot is null) return;
 
-        var count = GraphicsQuality.VehicleCount(VisualQuality.Ultra);
+        var logicalCount = _engine?.State.LivingCity.Vehicles.Count ?? 0;
+        var budget = GraphicsQuality.VehicleCount(VisualQuality.Ultra);
+        var count = Math.Min(budget, Math.Max(8, logicalCount));
         var mesh = new BoxMesh { Size = Vector3.One };
         mesh.Material = CreateVertexColorMaterial(0.40f, 0.22f);
 
@@ -616,29 +618,65 @@ public partial class PremiumCityView : Control
         if (_vehicles?.Multimesh is not MultiMesh multi || _engine is null) return;
 
         var state = _engine.State;
+        var logicalVehicles = state.LivingCity.Vehicles
+            .Where(v => v.Status != "Fora de uso")
+            .OrderBy(v => v.Id)
+            .ToArray();
+
+        if (logicalVehicles.Length == 0)
+        {
+            multi.VisibleInstanceCount = 0;
+            return;
+        }
+
         var rush = state.CurrentHour is >= 7 and <= 9 or >= 16 and <= 19 ? 1.0f :
                    state.CurrentHour is >= 0 and <= 5 ? 0.38f : 0.72f;
-        var visible = Math.Max(8, (int)(multi.InstanceCount * GraphicsQuality.QualityRatio(_quality) * rush));
-        multi.VisibleInstanceCount = Math.Min(visible, multi.InstanceCount);
+        var visible = Math.Max(4, (int)(logicalVehicles.Length * GraphicsQuality.QualityRatio(_quality) * rush));
+        multi.VisibleInstanceCount = Math.Min(Math.Min(visible, multi.InstanceCount), logicalVehicles.Length);
 
         for (var i = 0; i < multi.VisibleInstanceCount; i++)
         {
-            var horizontal = (i & 1) == 0;
-            var laneIndex = (i / 2) % 5;
-            var laneAxis = (laneIndex - 2) * 14f + ((i % 4) < 2 ? 0.72f : -0.72f);
-            var direction = ((i / 10) & 1) == 0 ? 1f : -1f;
-            var phase = (float)((_anim * (0.030 + (i % 7) * 0.0018) * direction + i * 0.071) % 1.0);
-            if (phase < 0) phase += 1f;
-            var travel = Mathf.Lerp(-34f, 34f, phase);
+            var vehicle = logicalVehicles[i];
+            var currentDistrict = state.Districts.FirstOrDefault(d => d.Id == vehicle.CurrentDistrictId)
+                                  ?? state.Districts.First();
+            var targetDistrict = state.Districts.FirstOrDefault(d => d.Id == vehicle.TargetDistrictId)
+                                 ?? currentDistrict;
 
-            var pos = horizontal
-                ? new Vector3(travel, 0.38f, laneAxis)
-                : new Vector3(laneAxis, 0.38f, travel);
+            var from = DistrictPosition(currentDistrict);
+            var to = DistrictPosition(targetDistrict);
+            var delta = to - from;
+            Vector3 pos;
+            Vector3 scale;
 
-            var scale = horizontal
-                ? new Vector3(0.85f, 0.34f, 0.40f)
-                : new Vector3(0.40f, 0.34f, 0.85f);
+            if (vehicle.Status == "Em rota" && delta.LengthSquared() > 0.01f)
+            {
+                var visualAdvance = (float)((_anim * (0.025 + (i % 5) * 0.002)) % 0.18);
+                var t = Mathf.Clamp((float)vehicle.RouteProgress + visualAdvance, 0f, 1f);
+                pos = from + delta * t;
 
+                if (MathF.Abs(delta.X) >= MathF.Abs(delta.Z))
+                {
+                    pos.Z += (i & 1) == 0 ? 0.72f : -0.72f;
+                    scale = new Vector3(0.85f, 0.34f, 0.40f);
+                }
+                else
+                {
+                    pos.X += (i & 1) == 0 ? 0.72f : -0.72f;
+                    scale = new Vector3(0.40f, 0.34f, 0.85f);
+                }
+            }
+            else
+            {
+                var h = StableHash($"vehicle:{vehicle.Id}");
+                var ox = (Hash01(h) - 0.5f) * 7.6f;
+                var oz = (Hash01(h >> 8) - 0.5f) * 7.6f;
+                pos = from + new Vector3(ox, 0, oz);
+                scale = (h & 1) == 0
+                    ? new Vector3(0.85f, 0.34f, 0.40f)
+                    : new Vector3(0.40f, 0.34f, 0.85f);
+            }
+
+            pos.Y = 0.38f;
             multi.SetInstanceTransform(i, new Transform3D(ScaledBasis(scale), pos));
         }
     }
@@ -652,17 +690,34 @@ public partial class PremiumCityView : Control
         if (state.Weather.Contains("Chuva", StringComparison.OrdinalIgnoreCase))
             activity *= 0.62f;
 
-        var visible = Math.Max(10, (int)(multi.InstanceCount * GraphicsQuality.QualityRatio(_quality) * activity));
-        multi.VisibleInstanceCount = Math.Min(visible, multi.InstanceCount);
+        var visualCitizens = state.Citizens
+            .Where(c => c.Alive
+                        && c.SimulationLevel is SimulationDetailLevel.Active or SimulationDetailLevel.Regional or SimulationDetailLevel.Interactive
+                        && c.CurrentActivity is not "Dormindo" and not "Em casa")
+            .OrderByDescending(c => c.SimulationLevel)
+            .ThenBy(c => c.Id)
+            .ToArray();
+
+        if (visualCitizens.Length == 0)
+        {
+            multi.VisibleInstanceCount = 0;
+            return;
+        }
+
+        var visible = Math.Max(1, (int)(visualCitizens.Length * GraphicsQuality.QualityRatio(_quality) * activity));
+        multi.VisibleInstanceCount = Math.Min(Math.Min(visible, multi.InstanceCount), visualCitizens.Length);
 
         for (var i = 0; i < multi.VisibleInstanceCount; i++)
         {
-            var district = state.Districts[i % state.Districts.Count];
+            var citizen = visualCitizens[i];
+            var district = state.Districts.FirstOrDefault(d => d.Id == citizen.DistrictId)
+                           ?? state.Districts.First();
             var center = DistrictPosition(district);
-            var h = StableHash($"person:{i}");
+            var h = StableHash($"person:{citizen.Id}");
             var alongX = (h & 1) == 0;
             var edge = ((h >> 2) & 1) == 0 ? 4.85f : -4.85f;
-            var phase = (float)((_anim * (0.012 + (i % 11) * 0.0009) + Hash01(h >> 8)) % 1.0);
+            var energyFactor = 0.65 + (double)Math.Clamp(citizen.Energy, 20m, 100m) / 180.0;
+            var phase = (float)((_anim * (0.010 + (i % 11) * 0.0007) * energyFactor + Hash01(h >> 8)) % 1.0);
             var travel = Mathf.Lerp(-4.6f, 4.6f, phase);
 
             var pos = alongX
