@@ -10,6 +10,9 @@ var tests = new List<(string Name, Action Run)>
     ("ações jogáveis preservam invariantes", TestPlayableActions),
     ("relógio horário e vida do jogador", TestHourlyLife),
     ("branding, estratégia e finanças empresariais", TestDeepBusiness),
+    ("simulação sistêmica 1.6 e LOD populacional", TestSystemicSimulation),
+    ("affordances contextuais do jogador", TestAffordances),
+    ("migração de save 1.5 para schema 1.6", TestSchemaMigration),
     ("matriz multi-seed de estabilidade econômica", TestEconomyStressMatrix),
     ("save/load atômico", TestSaveRoundTrip),
     ("simulação longa sem invariantes quebradas", TestLongRun)
@@ -156,6 +159,74 @@ static void TestDeepBusiness()
     SimulationValidator.Validate(engine.State);
 }
 
+
+static void TestSystemicSimulation()
+{
+    var engine = new SimulationEngine(WorldGenerator.Generate(1600, "Sistema"));
+    var initial = engine.GetSystemicSnapshot();
+
+    Check(initial.Population == engine.State.Population, "snapshot sistêmico perdeu cidadãos");
+    Check(initial.Interactive is > 0 and <= 24, $"LOD interativo inválido: {initial.Interactive}");
+    Check(initial.Active <= 96, $"LOD ativo acima do orçamento: {initial.Active}");
+    Check(initial.Interactive + initial.Active + initial.Regional + initial.Abstract == initial.Population,
+        "classes de LOD não fecham a população");
+    Check(initial.Residences > 0, "moradias lógicas não foram geradas");
+
+    engine.AdvanceHours(24);
+    var after = engine.GetSystemicSnapshot();
+
+    Check(engine.State.Systemic.TotalCitizenDecisions > 0, "Utility AI não tomou decisões");
+    Check(engine.State.Citizens.All(c => c.Hygiene is >= 0m and <= 100m), "higiene saiu do intervalo");
+    Check(engine.State.Citizens.All(c => c.SocialNeed is >= 0m and <= 100m), "necessidade social saiu do intervalo");
+    Check(engine.State.Citizens.All(c => c.Fun is >= 0m and <= 100m), "diversão saiu do intervalo");
+    Check(after.Relationships > 0, "grafo social não produziu relações");
+    Check(engine.State.Systemic.TotalSocialInteractions > 0, "nenhuma interação social foi processada");
+    SimulationValidator.Validate(engine.State);
+}
+
+static void TestAffordances()
+{
+    var engine = new SimulationEngine(WorldGenerator.Generate(1601, "Interações"));
+    engine.State.Player.Cash = Math.Max(engine.State.Player.Cash, 10_000m);
+    engine.State.Player.Hunger = 85m;
+    engine.State.Player.Hygiene = 20m;
+    engine.State.Player.Fun = 15m;
+
+    var actions = engine.GetPlayerAffordances();
+    Check(actions.Count >= 5, "catálogo de affordances pequeno demais");
+    Check(actions.Any(a => a.Id == "eat"), "alimentação contextual indisponível");
+    Check(actions.Any(a => a.Id == "shower"), "higiene contextual indisponível");
+
+    var beforeMoney = engine.State.TotalLiquidMoney();
+    var beforeHunger = engine.State.Player.Hunger;
+    Check(engine.PerformPlayerAffordance("eat"), "affordance de alimentação falhou");
+    Check(engine.State.Player.Hunger < beforeHunger, "alimentação não reduziu fome");
+    Check(Math.Abs(engine.State.TotalLiquidMoney() - beforeMoney) <= 0.02m, "affordance de comida criou/destruiu dinheiro");
+
+    Check(engine.PerformPlayerAffordance("shower"), "affordance de banho falhou");
+    Check(engine.State.Player.Hygiene == 100m, "banho não recuperou higiene");
+    Check(engine.PerformPlayerAffordance("relax"), "affordance de lazer falhou");
+    Check(engine.State.Player.Fun > 15m, "lazer não recuperou diversão");
+    SimulationValidator.Validate(engine.State);
+}
+
+static void TestSchemaMigration()
+{
+    var state = WorldGenerator.Generate(1602, "Legado");
+    state.SchemaVersion = 1;
+    state.RulesVersion = "1.5.0";
+
+    var dir = Path.Combine(Path.GetTempPath(), "metropole-migration-tests", Guid.NewGuid().ToString("N"));
+    var file = Path.Combine(dir, "legacy-save.json");
+    SaveStore.Save(file, state);
+    var loaded = SaveStore.Load(file);
+
+    Check(loaded.SchemaVersion == GameState.CurrentSchemaVersion, "schema legado não migrou");
+    Check(loaded.RulesVersion == "1.6.0", "rules version não migrou para 1.6");
+    Check(loaded.Residences.Count > 0, "migração não criou moradias lógicas");
+    Check(loaded.Systemic.MaxInteractiveCitizens > 0, "estado sistêmico não foi inicializado");
+    Directory.Delete(dir, true);
+}
 
 static void TestEconomyStressMatrix()
 {
