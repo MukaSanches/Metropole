@@ -395,6 +395,8 @@ public static class LivingCitySystems
 
     private static void UpdateRelationships(GameState state)
     {
+        if (state.CurrentDay % 3 != 0) return;
+
         foreach (var group in state.Citizens
                      .Where(x => x.Alive && x.AgeYears >= 14)
                      .GroupBy(x => x.DistrictId))
