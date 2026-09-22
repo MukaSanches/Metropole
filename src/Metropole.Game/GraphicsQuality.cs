@@ -30,7 +30,7 @@ public static class GraphicsQuality
     {
         return RenderingMethod switch
         {
-            "forward_plus" => VisualQuality.High,
+            "forward_plus" => VisualQuality.Ultra,
             "mobile" => VisualQuality.Medium,
             _ => VisualQuality.Low
         };
@@ -38,32 +38,32 @@ public static class GraphicsQuality
 
     public static int BuildingsPerDistrict(VisualQuality quality) => quality switch
     {
-        VisualQuality.Ultra => 34,
-        VisualQuality.High => 28,
+        VisualQuality.Ultra => 40,
+        VisualQuality.High => 32,
         VisualQuality.Medium => 20,
         _ => 12
     };
 
     public static int TreesPerDistrict(VisualQuality quality) => quality switch
     {
-        VisualQuality.Ultra => 24,
-        VisualQuality.High => 18,
+        VisualQuality.Ultra => 32,
+        VisualQuality.High => 24,
         VisualQuality.Medium => 12,
         _ => 7
     };
 
     public static int VehicleCount(VisualQuality quality) => quality switch
     {
-        VisualQuality.Ultra => 180,
-        VisualQuality.High => 120,
+        VisualQuality.Ultra => 220,
+        VisualQuality.High => 150,
         VisualQuality.Medium => 72,
         _ => 32
     };
 
     public static int PedestrianCount(VisualQuality quality) => quality switch
     {
-        VisualQuality.Ultra => 360,
-        VisualQuality.High => 220,
+        VisualQuality.Ultra => 420,
+        VisualQuality.High => 280,
         VisualQuality.Medium => 120,
         _ => 48
     };
