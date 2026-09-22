@@ -13,7 +13,11 @@ var tests = new List<(string Name, Action Run)>
     ("amizade, namoro, casamento e família", TestSocialLifecycle),
     ("matriz multi-seed de estabilidade econômica", TestEconomyStressMatrix),
     ("save/load atômico", TestSaveRoundTrip),
-    ("simulação longa sem invariantes quebradas", TestLongRun)
+    ("simulação longa sem invariantes quebradas", TestLongRun),
+    ("núcleo AAA inicializa LOD, propriedades e tráfego", TestAaaSimulationCore),
+    ("núcleo AAA permanece determinístico", TestAaaDeterminism),
+    ("probe LOD preserva orçamento com 10 mil agentes", TestAaaScaleProbe),
+    ("save schema 1 migra para schema 2", TestAaaSaveMigration)
 };
 
 var failures = 0;
@@ -288,6 +292,83 @@ static void TestLongRun()
     Check(engine.State.UnemploymentRate < 0.55m, $"desemprego estrutural excessivo: {engine.State.UnemploymentRate:P1}");
     Check(engine.State.Companies.Where(c => c.Open).All(c => c.BrandAwareness is >= 0m and <= 1m), "marca fora do intervalo");
     Console.WriteLine($"       5 anos simulados em {sw.Elapsed.TotalSeconds:N2}s; população {engine.State.Population:N0}; empresas {engine.State.OpenCompanies:N0}; desemprego {engine.State.UnemploymentRate:P1}.");
+}
+
+static void TestAaaSimulationCore()
+{
+    var engine = new SimulationEngine(WorldGenerator.Generate(1600, "AAA"));
+    var snapshot = engine.GetAaaSnapshot();
+
+    Check(snapshot.Citizens == engine.State.Population, "população AAA divergiu da população lógica");
+    Check(snapshot.Regions == engine.State.Districts.Count, "regiões AAA não foram inicializadas");
+    Check(snapshot.Households > 0 && snapshot.Properties > 0, "domicílios/imóveis não foram inicializados");
+    Check(snapshot.TrafficLinks > 0, "malha de tráfego abstrata não foi criada");
+    Check(AffordanceCatalog.ForProvider("Fridge").Count >= 2, "geladeira não oferece affordances suficientes");
+
+    var person = engine.State.Citizens.First(c => c.Alive && c.DistrictId == engine.State.Player.DistrictId);
+    engine.SetInteractiveCitizen(person.Id);
+    var profile = engine.GetCitizenSimulationProfile(person.Id);
+    Check(profile is not null && profile.Lod == SimulationLodTier.Interactive, "LOD interativo não foi aplicado");
+
+    engine.AdvanceHours(48);
+    profile = engine.GetCitizenSimulationProfile(person.Id);
+    Check(profile is not null && profile.CurrentGoal.Action.Length > 0, "utility goal não foi resolvido");
+    Check(engine.GetAaaSnapshot().SchedulerTicks >= 48, "scheduler horário não executou");
+    AaaSimulationValidator.Validate(engine.State);
+}
+
+static void TestAaaDeterminism()
+{
+    var a = new SimulationEngine(WorldGenerator.Generate(6161, "A"));
+    var b = new SimulationEngine(WorldGenerator.Generate(6161, "A"));
+
+    a.AdvanceHours(96);
+    b.AdvanceHours(96);
+
+    var sa = a.GetAaaSnapshot();
+    var sb = b.GetAaaSnapshot();
+    Check(sa.Statistical == sb.Statistical && sa.Regional == sb.Regional && sa.Active == sb.Active,
+        "LOD AAA divergiu com a mesma seed");
+    Check(sa.TrafficLinks == sb.TrafficLinks && sa.AverageCongestion == sb.AverageCongestion,
+        "tráfego AAA divergiu com a mesma seed");
+
+    var id = a.State.Citizens.First(c => c.Alive).Id;
+    var pa = a.GetCitizenSimulationProfile(id);
+    var pb = b.GetCitizenSimulationProfile(id);
+    Check(pa is not null && pb is not null, "perfil AAA ausente");
+    Check(pa!.Needs.Thirst == pb!.Needs.Thirst && pa.Needs.Hygiene == pb.Needs.Hygiene,
+        "necessidades AAA perderam determinismo");
+    Check(pa.CurrentGoal.Need == pb.CurrentGoal.Need && pa.CurrentGoal.Utility == pb.CurrentGoal.Utility,
+        "utility goal perdeu determinismo");
+}
+
+static void TestAaaScaleProbe()
+{
+    var result = AaaScaleProbe.ProbeLodAllocation(10_000, 96);
+    Check(result.Population == 10_000, "probe não preservou população");
+    Check(result.Interactive == 1, "probe excedeu orçamento interativo");
+    Check(result.Active <= 96, "probe excedeu orçamento Active");
+    Check(result.Statistical + result.Regional + result.Active + result.Interactive == 10_000,
+        "probe LOD perdeu agentes");
+}
+
+static void TestAaaSaveMigration()
+{
+    var state = WorldGenerator.Generate(1616, "Migração");
+    state.SchemaVersion = 1;
+    state.RulesVersion = "1.5.0";
+    state.Aaa = new AaaWorldState();
+
+    var dir = Path.Combine(Path.GetTempPath(), "metropole-tests", Guid.NewGuid().ToString("N"));
+    var file = Path.Combine(dir, "save-v1.json");
+    SaveStore.Save(file, state);
+    var loaded = SaveStore.Load(file);
+    var engine = new SimulationEngine(loaded);
+
+    Check(loaded.SchemaVersion == GameState.CurrentSchemaVersion, "schema legado não foi migrado");
+    Check(loaded.RulesVersion == "1.6.0", "rules version não foi migrada");
+    Check(engine.State.Aaa.Initialized, "estado AAA não foi reconstruído após migração");
+    Directory.Delete(dir, true);
 }
 
 static void Check(bool condition, string message)

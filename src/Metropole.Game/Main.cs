@@ -221,7 +221,12 @@ public partial class Main : Control
     {
         if (@event is not InputEventKey key || !key.Pressed || key.Echo) return;
 
-        if (key.Keycode == Key.S && key.CtrlPressed && _sim is not null)
+        if (key.Keycode == Key.F1 && _sim is not null)
+        {
+            ShowAaaDebugDialog();
+            GetViewport().SetInputAsHandled();
+        }
+        else if (key.Keycode == Key.S && key.CtrlPressed && _sim is not null)
         {
             SaveGame();
             GetViewport().SetInputAsHandled();
@@ -232,6 +237,26 @@ public partial class Main : Control
             ShowStartScreen();
             GetViewport().SetInputAsHandled();
         }
+    }
+
+    private void ShowAaaDebugDialog()
+    {
+        if (_sim is null) return;
+        var snapshot = _sim.GetAaaSnapshot();
+        var dialog = new AcceptDialog
+        {
+            Title = "METRÓPOLE ∞ • DIAGNÓSTICO AAA",
+            DialogText =
+                $"População lógica: {snapshot.Citizens:N0}\n" +
+                $"LOD: {snapshot.Statistical:N0} estatístico • {snapshot.Regional:N0} regional • {snapshot.Active:N0} ativo • {snapshot.Interactive:N0} interativo\n" +
+                $"Regiões: {snapshot.Regions} • domicílios: {snapshot.Households:N0} • imóveis: {snapshot.Properties:N0}\n" +
+                $"Veículos lógicos: {snapshot.Vehicles:N0} • links viários: {snapshot.TrafficLinks:N0}\n" +
+                $"Congestionamento médio: {snapshot.AverageCongestion:P0}\n" +
+                $"Scheduler: {snapshot.SchedulerTicks:N0} ticks • lote {snapshot.SchedulerBatchSize}\n\n" +
+                "F1 abre este painel. A população lógica continua simulada independentemente dos proxies 3D."
+        };
+        AddChild(dialog);
+        dialog.PopupCentered(new Vector2I(720, 470));
     }
 
     private void ShowStartScreen()
@@ -353,7 +378,7 @@ public partial class Main : Control
             $"{metrics.ProfessionArchetypes:N0} profissões • {metrics.BusinessArchetypes:N0} negócios\n" +
             $"{metrics.Products:N0} produtos • {metrics.Events:N0} eventos combináveis",
             12, _muted));
-        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.5.0 • REALISM & SOCIAL LIFE", 11, _muted2, false));
+        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.6.0 • AAA SIMULATION CORE", 11, _muted2, false));
     }
 
     private void BuildGameScreen()
@@ -676,6 +701,7 @@ public partial class Main : Control
 
     private void RefreshAll()
     {
+        _sim?.SetInteractiveCitizen(_selectedCitizenId);
         if (_sim is null) return;
         var s = _sim.State;
         var employer = s.Player.EmployerCompanyId is int employerId
