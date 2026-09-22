@@ -682,7 +682,7 @@ public partial class Main : Control
 
         footer.AddChild(MakeLabel(
             GraphicsQuality.UsePremium3D
-                ? "2.5D • MultiMesh • AUTO adaptativo • zoom/pan"
+                ? "3D PBR • perspectiva • TAA/MSAA • MultiMesh • AUTO adaptativo • zoom/pan"
                 : "fallback leve • dia/noite • clima • tráfego",
             10, _muted2, false));
         box.AddChild(footer);
@@ -1298,7 +1298,10 @@ public partial class Main : Control
             BorderWidthTop = 1,
             BorderWidthRight = 1,
             BorderWidthBottom = 1,
-            BorderColor = _line
+            BorderColor = _line,
+            ShadowColor = new Color(0.0f, 0.0f, 0.0f, 0.26f),
+            ShadowSize = 7,
+            ShadowOffset = new Vector2(0, 3)
         };
         panel.AddThemeStyleboxOverride("panel", style);
         return panel;
