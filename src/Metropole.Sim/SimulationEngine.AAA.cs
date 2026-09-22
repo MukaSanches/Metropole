@@ -90,18 +90,24 @@ public sealed partial class SimulationEngine
             BootstrapRoadGraph(world);
             world.Initialized = true;
             world.LastProcessedDay = State.CurrentDay;
+            UpdateRegionAggregates();
         }
         else
         {
             BootstrapRegions(world);
-            BootstrapCitizens(world);
-            BootstrapHouseholdsAndProperties(world);
             BootstrapRoadGraph(world);
+
+            var aliveCount = State.Citizens.Count(citizen => citizen.Alive);
+            if (world.Citizens.Count < aliveCount)
+            {
+                BootstrapCitizens(world);
+                BootstrapHouseholdsAndProperties(world);
+                BootstrapVehicles(world);
+            }
         }
 
         world.Scheduler.BatchSize = Math.Clamp(Math.Max(64, State.Population / 10), 64, 256);
         UpdateSimulationLod();
-        UpdateRegionAggregates();
         AaaSimulationValidator.Validate(State);
     }
 
@@ -287,9 +293,14 @@ public sealed partial class SimulationEngine
         if (world.LastProcessedDay == State.CurrentDay) return;
 
         world.LastProcessedDay = State.CurrentDay;
-        BootstrapCitizens(world);
-        BootstrapHouseholdsAndProperties(world);
-        BootstrapVehicles(world);
+
+        var aliveCount = State.Citizens.Count(citizen => citizen.Alive);
+        if (world.Citizens.Count < aliveCount)
+        {
+            BootstrapCitizens(world);
+            BootstrapHouseholdsAndProperties(world);
+            BootstrapVehicles(world);
+        }
 
         foreach (var citizen in State.Citizens.Where(c => c.Alive).OrderBy(c => c.Id))
         {
@@ -302,9 +313,16 @@ public sealed partial class SimulationEngine
         }
 
         UpdateSimulationLod();
-        UpdateHouseholdLocations();
-        UpdateAbstractTraffic();
-        UpdateRegionAggregates();
+
+        // Expensive aggregate reconciliation runs at controlled cadences.
+        // It does not affect economic truth, only derived world telemetry.
+        if (State.CurrentDay % 7 == 0 || State.CurrentDay <= 1)
+        {
+            UpdateHouseholdLocations();
+            UpdateAbstractTraffic();
+            UpdateRegionAggregates();
+        }
+
         AaaSimulationValidator.Validate(State);
     }
 
