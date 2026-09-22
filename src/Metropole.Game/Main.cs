@@ -66,6 +66,16 @@ public partial class Main : Control
     {
         try
         {
+            ShowStartScreen();
+            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+
+            if (FindChild("MenuCityBackdrop", true, false) is not MenuCityBackdrop menuBackdrop ||
+                menuBackdrop.AssetCount < 20 ||
+                menuBackdrop.AnimatedCharacterCount < 1)
+                throw new InvalidOperationException(
+                    $"Menu 3D incompleto: assets={menuBackdrop?.AssetCount ?? 0}, animated={menuBackdrop?.AnimatedCharacterCount ?? 0}.");
+
             _sim = new SimulationEngine(WorldGenerator.Generate(120260921, "Validação"));
             BuildGameScreen();
             await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
@@ -146,18 +156,22 @@ public partial class Main : Control
 
             if (GraphicsQuality.UsePremium3D)
             {
-                if (_premiumCityView is null || _premiumCityView.DetailedAssetCount < 20)
+                if (_premiumCityView is null || _premiumCityView.DetailedAssetCount < 120)
                     throw new InvalidOperationException($"Camada CC0 3D não carregou assets suficientes: {_premiumCityView?.DetailedAssetCount ?? 0}.");
+                if (_premiumCityView.PropAssetCount < 30)
+                    throw new InvalidOperationException($"Cidade não carregou props urbanos suficientes: {_premiumCityView.PropAssetCount}.");
                 if (_premiumCityView.AnimatedProxyCount < 1)
                     throw new InvalidOperationException("Nenhum personagem CC0 com AnimationPlayer foi validado.");
                 if (_premiumCityView.InteractivePersonCount < 1)
                     throw new InvalidOperationException("Nenhum cidadão 3D interativo foi validado.");
+                if (_premiumCityView.AvailableAnimationCount < 1)
+                    throw new InvalidOperationException("Nenhum clip de animação foi catalogado nos personagens.");
             }
 
             if (_sim.State.Player.RelationshipStatus != "Casado")
                 throw new InvalidOperationException("Fluxo social de namoro/casamento não foi validado no executável.");
 
-            GD.Print($"METROPOLE_UI_VALIDATION_OK day={_sim.State.CurrentDay} hour={_sim.State.CurrentHour} companies={_sim.State.OpenCompanies} population={_sim.State.Population} social={_sim.State.Player.RelationshipStatus} audio={_audio.LoadedAssetCount} detailed={_premiumCityView?.DetailedAssetCount ?? 0} animated={_premiumCityView?.AnimatedProxyCount ?? 0} interactive={_premiumCityView?.InteractivePersonCount ?? 0}");
+            GD.Print($"METROPOLE_UI_VALIDATION_OK day={_sim.State.CurrentDay} hour={_sim.State.CurrentHour} companies={_sim.State.OpenCompanies} population={_sim.State.Population} social={_sim.State.Player.RelationshipStatus} audio={_audio.LoadedAssetCount} menu={menuBackdrop.AssetCount} detailed={_premiumCityView?.DetailedAssetCount ?? 0} props={_premiumCityView?.PropAssetCount ?? 0} animated={_premiumCityView?.AnimatedProxyCount ?? 0} clips={_premiumCityView?.AvailableAnimationCount ?? 0} interactive={_premiumCityView?.InteractivePersonCount ?? 0}");
             GetTree().Quit(0);
         }
         catch (Exception ex)
@@ -266,7 +280,19 @@ public partial class Main : Control
         _tickAccumulator = 0;
         _nav.Clear();
         ClearNode(this);
-        AddBackground();
+
+        var backdrop = new MenuCityBackdrop { Name = "MenuCityBackdrop" };
+        backdrop.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        AddChild(backdrop);
+
+        var veil = new ColorRect
+        {
+            Name = "MenuVeil",
+            Color = new Color(0.008f, 0.018f, 0.030f, 0.72f),
+            MouseFilter = MouseFilterEnum.Ignore
+        };
+        veil.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        AddChild(veil);
 
         var margin = new MarginContainer();
         margin.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
@@ -280,7 +306,7 @@ public partial class Main : Control
         row.AddThemeConstantOverride("separation", 26);
         margin.AddChild(row);
 
-        var hero = MakePanel(_panel, 22);
+        var hero = MakePanel(new Color(_panel.R, _panel.G, _panel.B, 0.91f), 22);
         hero.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         hero.SizeFlagsVertical = SizeFlags.ExpandFill;
         row.AddChild(hero);
@@ -309,7 +335,7 @@ public partial class Main : Control
         heroBox.AddChild(MakeSpacer(6));
         heroBox.AddChild(MakeLabel("OFFLINE • SAVE LOCAL • ECONOMIA DETERMINÍSTICA", 11, _muted2, false));
 
-        var setup = MakePanel(_panel, 22);
+        var setup = MakePanel(new Color(_panel.R, _panel.G, _panel.B, 0.94f), 22);
         setup.CustomMinimumSize = new Vector2(390, 0);
         setup.SizeFlagsVertical = SizeFlags.ExpandFill;
         row.AddChild(setup);
@@ -318,8 +344,8 @@ public partial class Main : Control
         box.AddThemeConstantOverride("separation", 11);
         setup.AddChild(box);
 
-        box.AddChild(MakeLabel("NOVO MUNDO", 28, _text, false));
-        box.AddChild(MakeLabel("Defina seu personagem e inicie uma nova sociedade.", 14, _muted));
+        box.AddChild(MakeLabel("JOGAR", 28, _text, false));
+        box.AddChild(MakeLabel("Continue sua história ou crie uma nova cidade.", 14, _muted));
         box.AddChild(MakeSpacer(6));
 
         box.AddChild(MakeLabel("SEU NOME", 10, _muted2, false));
@@ -371,6 +397,33 @@ public partial class Main : Control
             box.AddChild(continueButton);
         }
 
+        var menuActions = new HBoxContainer();
+        menuActions.AddThemeConstantOverride("separation", 7);
+
+        var licenses = MakeButton("CRÉDITOS / LICENÇAS", false);
+        licenses.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        licenses.Pressed += () =>
+        {
+            var dialog = new AcceptDialog
+            {
+                Title = "METRÓPOLE ∞ • ASSETS E LICENÇAS",
+                DialogText =
+                    "Assets 3D: Kenney (CC0) + KayKit (CC0)\n" +
+                    "Materiais e HDRI: Poly Haven (CC0)\n" +
+                    "Áudio: Kenney Interface Sounds + OpenGameArt (CC0)\n\n" +
+                    "A lista técnica completa está em THIRD_PARTY_NOTICES.md e docs/EXTERNAL_ASSETS_V1.7.md."
+            };
+            AddChild(dialog);
+            dialog.PopupCentered(new Vector2I(620, 360));
+        };
+        menuActions.AddChild(licenses);
+
+        var quit = MakeButton("SAIR", false);
+        quit.CustomMinimumSize = new Vector2(92, 42);
+        quit.Pressed += () => GetTree().Quit();
+        menuActions.AddChild(quit);
+        box.AddChild(menuActions);
+
         box.AddChild(MakeSpacer(6));
         box.AddChild(MakeDivider());
         var metrics = ContentCatalog.Metrics;
@@ -378,7 +431,7 @@ public partial class Main : Control
             $"{metrics.ProfessionArchetypes:N0} profissões • {metrics.BusinessArchetypes:N0} negócios\n" +
             $"{metrics.Products:N0} produtos • {metrics.Events:N0} eventos combináveis",
             12, _muted));
-        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.6.0 • AAA SIMULATION CORE", 11, _muted2, false));
+        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.7.0 • VISUAL LEAP", 11, _muted2, false));
     }
 
     private void BuildGameScreen()
@@ -662,7 +715,7 @@ public partial class Main : Control
         _statusLabel = MakeLabel("Cidade pronta.", 10, _muted);
         _statusLabel.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         row.AddChild(_statusLabel);
-        row.AddChild(MakeLabel("Ctrl+S salvar • Esc menu", 10, _muted2, false));
+        row.AddChild(MakeLabel("F1 diagnóstico • Ctrl+S salvar • Esc menu", 10, _muted2, false));
         return panel;
     }
 

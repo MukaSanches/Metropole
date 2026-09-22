@@ -18,6 +18,7 @@ public partial class PremiumCityView : Control
     private StandardMaterial3D? _asphaltMaterial;
     private StandardMaterial3D? _pavementMaterial;
     private Sky? _realisticSky;
+    private readonly List<OmniLight3D> _streetLights = [];
 
     private readonly List<(MultiMeshInstance3D Node, int FullCount)> _scalableGroups = [];
     private MultiMeshInstance3D? _vehicles;
@@ -41,13 +42,15 @@ public partial class PremiumCityView : Control
     private int _lastOpenCompanies = -1;
 
     public string Diagnostics =>
-        $"{GraphicsQuality.RenderingMethod}/{GraphicsQuality.RenderingDriver} • {QualityModeLabel} • 3D • assets {_externalAssets?.DetailedAssetCount ?? 0}";
+        $"{GraphicsQuality.RenderingMethod}/{GraphicsQuality.RenderingDriver} • {QualityModeLabel} • 3D • assets {_externalAssets?.DetailedAssetCount ?? 0} • props {_externalAssets?.PropAssetCount ?? 0} • anim {_externalAssets?.AvailableAnimationCount ?? 0}";
 
     public event Action<int>? PersonSelected;
 
     public int DetailedAssetCount => _externalAssets?.DetailedAssetCount ?? 0;
+    public int PropAssetCount => _externalAssets?.PropAssetCount ?? 0;
     public int AnimatedProxyCount => _externalAssets?.AnimatedProxyCount ?? 0;
     public int InteractivePersonCount => _externalAssets?.InteractivePersonCount ?? 0;
+    public int AvailableAnimationCount => _externalAssets?.AvailableAnimationCount ?? 0;
 
     public bool FocusCitizen(int citizenId)
     {
@@ -276,12 +279,14 @@ public partial class PremiumCityView : Control
         }
 
         _scalableGroups.Clear();
+        _streetLights.Clear();
         _vehicles = null;
         _pedestrians = null;
         _externalAssets = null;
 
         BuildGround();
         BuildRoadNetwork();
+        BuildStreetLights();
         BuildDistricts();
         BuildVehicles();
         BuildPedestrians();
@@ -362,6 +367,36 @@ public partial class PremiumCityView : Control
             Position = position
         };
         _worldRoot.AddChild(mesh);
+    }
+
+    private void BuildStreetLights()
+    {
+        if (_worldRoot is null) return;
+
+        for (var lane = -2; lane <= 2; lane++)
+        {
+            var axis = lane * 14f;
+            for (var i = -2; i <= 2; i++)
+            {
+                var offset = i * 12f;
+                foreach (var horizontal in new[] { true, false })
+                {
+                    var light = new OmniLight3D
+                    {
+                        Name = $"StreetLight_{lane}_{i}_{(horizontal ? "H" : "V")}",
+                        Position = horizontal
+                            ? new Vector3(offset, 2.8f, axis + 1.85f)
+                            : new Vector3(axis + 1.85f, 2.8f, offset),
+                        LightColor = new Color(1.0f, 0.78f, 0.48f),
+                        LightEnergy = 0f,
+                        OmniRange = 7.5f,
+                        ShadowEnabled = false
+                    };
+                    _worldRoot.AddChild(light);
+                    _streetLights.Add(light);
+                }
+            }
+        }
     }
 
     private void BuildDistricts()
@@ -687,6 +722,18 @@ public partial class PremiumCityView : Control
         _sun.LightEnergy = 0.18f + daylight * (storm ? 0.65f : 1.42f);
         _sun.LightColor = new Color(0.50f, 0.60f, 0.82f).Lerp(new Color(1.0f, 0.89f, 0.72f), daylight);
         _sun.RotationDegrees = new Vector3(-38f - state.CurrentHour * 2.1f, -28f + state.CurrentHour * 4.0f, 0);
+
+        var streetLightEnergy = Math.Clamp((1f - daylight) * 1.65f, 0f, 1.65f);
+        for (var i = 0; i < _streetLights.Count; i++)
+        {
+            var light = _streetLights[i];
+            var withinBudget = _quality >= VisualQuality.High
+                ? i % 2 == 0
+                : _quality >= VisualQuality.Medium && i % 4 == 0;
+            light.Visible = withinBudget && streetLightEnergy > 0.08f;
+            light.LightEnergy = streetLightEnergy;
+            light.ShadowEnabled = _quality >= VisualQuality.Ultra && i % 6 == 0;
+        }
 
         _environment.FogEnabled = fog || rain;
         _environment.FogDensity = fog ? 0.022f : rain ? 0.006f : 0.0f;
