@@ -25,26 +25,106 @@ public partial class ExternalAssetLayer : Node3D
         public required float Speed { get; init; }
         public required float Phase { get; init; }
         public AnimationPlayer? Animation { get; init; }
+        public string LastActivity { get; set; } = "";
+        public int LastAnimationBucket { get; set; } = -1;
     }
 
     private SimulationEngine? _engine;
     private readonly List<Node3D> _buildings = [];
+    private readonly List<Node3D> _props = [];
     private readonly List<VehicleProxy> _vehicles = [];
     private readonly List<PersonProxy> _people = [];
+    private readonly HashSet<string> _animationCatalog = new(StringComparer.OrdinalIgnoreCase);
     private bool _built;
 
     private static readonly string[] CommercialBuildings =
     [
         "res://assets/external/kenney/city/commercial/building-commercial-a.glb",
+        "res://assets/external/kenney/city/commercial/building-b.glb",
+        "res://assets/external/kenney/city/commercial/building-c.glb",
+        "res://assets/external/kenney/city/commercial/building-d.glb",
         "res://assets/external/kenney/city/commercial/building-commercial-e.glb",
+        "res://assets/external/kenney/city/commercial/building-f.glb",
+        "res://assets/external/kenney/city/commercial/building-g.glb",
         "res://assets/external/kenney/city/commercial/building-commercial-h.glb",
-        "res://assets/external/kenney/city/commercial/building-skyscraper-a.glb"
+        "res://assets/external/kenney/city/commercial/building-i.glb",
+        "res://assets/external/kenney/city/commercial/building-j.glb",
+        "res://assets/external/kenney/city/commercial/building-k.glb",
+        "res://assets/external/kenney/city/commercial/building-l.glb",
+        "res://assets/external/kenney/city/commercial/building-m.glb",
+        "res://assets/external/kenney/city/commercial/building-n.glb",
+        "res://assets/external/kenney/city/commercial/building-skyscraper-a.glb",
+        "res://assets/external/kenney/city/commercial/building-skyscraper-b.glb",
+        "res://assets/external/kenney/city/commercial/building-skyscraper-c.glb",
+        "res://assets/external/kenney/city/commercial/building-skyscraper-d.glb",
+        "res://assets/external/kenney/city/commercial/building-skyscraper-e.glb"
     ];
 
     private static readonly string[] IndustrialBuildings =
     [
+        "res://assets/external/kenney/city/industrial/building-a.glb",
+        "res://assets/external/kenney/city/industrial/building-b.glb",
         "res://assets/external/kenney/city/industrial/building-industrial-c.glb",
-        "res://assets/external/kenney/city/industrial/building-industrial-m.glb"
+        "res://assets/external/kenney/city/industrial/building-d.glb",
+        "res://assets/external/kenney/city/industrial/building-e.glb",
+        "res://assets/external/kenney/city/industrial/building-f.glb",
+        "res://assets/external/kenney/city/industrial/building-g.glb",
+        "res://assets/external/kenney/city/industrial/building-h.glb",
+        "res://assets/external/kenney/city/industrial/building-i.glb",
+        "res://assets/external/kenney/city/industrial/building-j.glb",
+        "res://assets/external/kenney/city/industrial/building-k.glb",
+        "res://assets/external/kenney/city/industrial/building-l.glb",
+        "res://assets/external/kenney/city/industrial/building-industrial-m.glb",
+        "res://assets/external/kenney/city/industrial/building-n.glb",
+        "res://assets/external/kenney/city/industrial/building-o.glb",
+        "res://assets/external/kenney/city/industrial/building-p.glb",
+        "res://assets/external/kenney/city/industrial/building-q.glb",
+        "res://assets/external/kenney/city/industrial/building-r.glb",
+        "res://assets/external/kenney/city/industrial/building-s.glb",
+        "res://assets/external/kenney/city/industrial/building-t.glb"
+    ];
+
+    private static readonly string[] ResidentialBuildings =
+    [
+        "res://assets/external/kaykit/city/building_A.gltf",
+        "res://assets/external/kaykit/city/building_B.gltf",
+        "res://assets/external/kaykit/city/building_C.gltf",
+        "res://assets/external/kaykit/city/building_D.gltf",
+        "res://assets/external/kaykit/city/building_E.gltf",
+        "res://assets/external/kaykit/city/building_F.gltf",
+        "res://assets/external/kaykit/city/building_G.gltf",
+        "res://assets/external/kaykit/city/building_H.gltf"
+    ];
+
+    private static readonly string[] UrbanProps =
+    [
+        "res://assets/external/kaykit/city/bench.gltf",
+        "res://assets/external/kaykit/city/bush.gltf",
+        "res://assets/external/kaykit/city/dumpster.gltf",
+        "res://assets/external/kaykit/city/firehydrant.gltf",
+        "res://assets/external/kaykit/city/streetlight.gltf",
+        "res://assets/external/kaykit/city/trafficlight_A.gltf",
+        "res://assets/external/kaykit/city/trafficlight_B.gltf",
+        "res://assets/external/kaykit/city/trafficlight_C.gltf",
+        "res://assets/external/kaykit/city/trash_A.gltf",
+        "res://assets/external/kaykit/city/trash_B.gltf",
+        "res://assets/external/kaykit/city/watertower.gltf"
+    ];
+
+    private static readonly string[] IndustrialProps =
+    [
+        "res://assets/external/kenney/factory/crane.glb",
+        "res://assets/external/kenney/factory/crane-lift.glb",
+        "res://assets/external/kenney/factory/machine.glb",
+        "res://assets/external/kenney/factory/machine-fortified.glb",
+        "res://assets/external/kenney/factory/robot-arm-a.glb",
+        "res://assets/external/kenney/factory/robot-arm-b.glb",
+        "res://assets/external/kenney/factory/conveyor.glb",
+        "res://assets/external/kenney/factory/conveyor-corner.glb",
+        "res://assets/external/kenney/factory/hopper-round.glb",
+        "res://assets/external/kenney/factory/screen-panel-flat.glb",
+        "res://assets/external/kenney/factory/pipe-large.glb",
+        "res://assets/external/kenney/factory/pipe-large-curve.glb"
     ];
 
     private static readonly string[] VehicleScenes =
@@ -54,7 +134,17 @@ public partial class ExternalAssetLayer : Node3D
         "res://assets/external/kenney/vehicles/delivery.glb",
         "res://assets/external/kenney/vehicles/van.glb",
         "res://assets/external/kenney/vehicles/police.glb",
-        "res://assets/external/kenney/vehicles/firetruck.glb"
+        "res://assets/external/kenney/vehicles/firetruck.glb",
+        "res://assets/external/kenney/vehicles/ambulance.glb",
+        "res://assets/external/kenney/vehicles/garbage-truck.glb",
+        "res://assets/external/kenney/vehicles/hatchback-sports.glb",
+        "res://assets/external/kenney/vehicles/sedan-sports.glb",
+        "res://assets/external/kenney/vehicles/suv-luxury.glb",
+        "res://assets/external/kenney/vehicles/suv.glb",
+        "res://assets/external/kenney/vehicles/truck-flat.glb",
+        "res://assets/external/kenney/vehicles/truck.glb",
+        "res://assets/external/kenney/vehicles/tractor.glb",
+        "res://assets/external/kenney/vehicles/delivery-flat.glb"
     ];
 
     private static readonly string[] CharacterScenes =
@@ -69,9 +159,12 @@ public partial class ExternalAssetLayer : Node3D
 
     public event Action<int>? PersonSelected;
 
-    public int DetailedAssetCount => _buildings.Count + _vehicles.Count + _people.Count;
+    public int DetailedAssetCount => _buildings.Count + _props.Count + _vehicles.Count + _people.Count;
+    public int BuildingAssetCount => _buildings.Count;
+    public int PropAssetCount => _props.Count;
     public int AnimatedProxyCount => _people.Count(p => p.Animation is not null);
     public int InteractivePersonCount => _people.Count;
+    public int AvailableAnimationCount => _animationCatalog.Count;
 
     public bool TryGetCitizenPosition(int citizenId, out Vector3 position)
     {
@@ -94,6 +187,7 @@ public partial class ExternalAssetLayer : Node3D
         _built = true;
 
         BuildLandmarks();
+        BuildUrbanProps();
         BuildDetailedVehicles();
         BuildAnimatedPeople();
         ApplyQuality(quality);
@@ -101,22 +195,31 @@ public partial class ExternalAssetLayer : Node3D
 
     public void ApplyQuality(VisualQuality quality)
     {
-        var buildingPerDistrict = quality switch
+        var buildingsVisible = quality switch
         {
-            VisualQuality.Ultra => 3,
-            VisualQuality.High => 2,
-            VisualQuality.Medium => 1,
+            VisualQuality.Ultra => _buildings.Count,
+            VisualQuality.High => Math.Min(_buildings.Count, 45),
+            VisualQuality.Medium => Math.Min(_buildings.Count, 27),
             _ => 0
         };
-
         for (var i = 0; i < _buildings.Count; i++)
-            _buildings[i].Visible = (i % 3) < buildingPerDistrict;
+            _buildings[i].Visible = i < buildingsVisible;
+
+        var propsVisible = quality switch
+        {
+            VisualQuality.Ultra => _props.Count,
+            VisualQuality.High => Math.Min(_props.Count, 72),
+            VisualQuality.Medium => Math.Min(_props.Count, 36),
+            _ => 0
+        };
+        for (var i = 0; i < _props.Count; i++)
+            _props[i].Visible = i < propsVisible;
 
         var vehicleCount = quality switch
         {
-            VisualQuality.Ultra => 22,
-            VisualQuality.High => 16,
-            VisualQuality.Medium => 9,
+            VisualQuality.Ultra => 48,
+            VisualQuality.High => 34,
+            VisualQuality.Medium => 18,
             _ => 0
         };
         for (var i = 0; i < _vehicles.Count; i++)
@@ -124,9 +227,9 @@ public partial class ExternalAssetLayer : Node3D
 
         var peopleCount = quality switch
         {
-            VisualQuality.Ultra => 30,
-            VisualQuality.High => 20,
-            VisualQuality.Medium => 10,
+            VisualQuality.Ultra => 48,
+            VisualQuality.High => 32,
+            VisualQuality.Medium => 16,
             _ => 0
         };
         for (var i = 0; i < _people.Count; i++)
@@ -158,6 +261,9 @@ public partial class ExternalAssetLayer : Node3D
         }
 
         var districts = state.Districts;
+        var citizenById = state.Citizens.Where(c => c.Alive).ToDictionary(c => c.Id);
+        var animationBucket = (int)(time / 8.0);
+
         foreach (var proxy in _people)
         {
             if (!proxy.Node.Visible || districts.Count == 0) continue;
@@ -171,6 +277,13 @@ public partial class ExternalAssetLayer : Node3D
                 ? center + new Vector3(travel, 0.12f, proxy.Edge)
                 : center + new Vector3(proxy.Edge, 0.12f, travel);
             proxy.Node.Rotation = new Vector3(0, proxy.AlongX ? -Mathf.Pi / 2f : 0f, 0);
+
+            if (!citizenById.TryGetValue(proxy.CitizenId, out var citizen)) continue;
+            if (proxy.LastActivity == citizen.CurrentActivity && proxy.LastAnimationBucket == animationBucket) continue;
+
+            proxy.LastActivity = citizen.CurrentActivity;
+            proxy.LastAnimationBucket = animationBucket;
+            PlayContextAnimation(proxy.Animation, citizen.CurrentActivity, proxy.CitizenId + animationBucket);
         }
 
         ApplyQuality(quality);
@@ -186,23 +299,26 @@ public partial class ExternalAssetLayer : Node3D
             var district = districts[d];
             var center = DistrictPosition(district);
             var industrial = district.LogisticsIndex > 1.12m;
-            var pool = industrial ? IndustrialBuildings : CommercialBuildings;
+            var commercial = district.WealthIndex > 1.05m || d == 0;
+            var pool = industrial ? IndustrialBuildings : commercial ? CommercialBuildings : ResidentialBuildings;
 
-            for (var i = 0; i < 3; i++)
+            for (var i = 0; i < 5; i++)
             {
-                var scenePath = pool[(d + i) % pool.Length];
+                var scenePath = pool[(d * 5 + i) % pool.Length];
                 var node = InstantiateScene(scenePath);
                 if (node is null) continue;
 
                 var offset = i switch
                 {
-                    0 => new Vector3(-3.6f, 0.20f, -3.4f),
-                    1 => new Vector3(3.5f, 0.20f, 3.2f),
-                    _ => new Vector3(3.5f, 0.20f, -3.3f)
+                    0 => new Vector3(-3.7f, 0.20f, -3.5f),
+                    1 => new Vector3(3.6f, 0.20f, 3.4f),
+                    2 => new Vector3(3.5f, 0.20f, -3.4f),
+                    3 => new Vector3(-3.6f, 0.20f, 3.3f),
+                    _ => new Vector3(0.2f, 0.20f, 2.9f)
                 };
 
                 node.Position = center + offset;
-                node.Scale = Vector3.One * (industrial ? 0.62f : 0.72f);
+                node.Scale = Vector3.One * (industrial ? 0.54f : commercial ? 0.62f : 0.50f);
                 node.Rotation = new Vector3(0, (d + i) % 4 * Mathf.Pi / 2f, 0);
                 AddChild(node);
                 _buildings.Add(node);
@@ -210,15 +326,44 @@ public partial class ExternalAssetLayer : Node3D
         }
     }
 
+    private void BuildUrbanProps()
+    {
+        if (_engine is null) return;
+
+        foreach (var district in _engine.State.Districts)
+        {
+            var center = DistrictPosition(district);
+            var industrial = district.LogisticsIndex > 1.12m;
+            var pool = industrial ? IndustrialProps : UrbanProps;
+            var count = industrial ? 8 : 10;
+
+            for (var i = 0; i < count; i++)
+            {
+                var path = pool[(district.Id * 3 + i) % pool.Length];
+                var node = InstantiateScene(path);
+                if (node is null) continue;
+
+                var hash = StableHash($"prop:{district.Id}:{i}");
+                var angle = Hash01(hash) * Mathf.Tau;
+                var radius = 3.2f + Hash01(hash >> 7) * 2.15f;
+                node.Position = center + new Vector3(Mathf.Cos(angle) * radius, 0.16f, Mathf.Sin(angle) * radius);
+                node.Rotation = new Vector3(0, Hash01(hash >> 11) * Mathf.Tau, 0);
+                node.Scale = Vector3.One * (industrial ? 0.38f : 0.68f);
+                AddChild(node);
+                _props.Add(node);
+            }
+        }
+    }
+
     private void BuildDetailedVehicles()
     {
-        const int count = 22;
+        const int count = 48;
         for (var i = 0; i < count; i++)
         {
             var node = InstantiateScene(VehicleScenes[i % VehicleScenes.Length]);
             if (node is null) continue;
 
-            node.Scale = Vector3.One * 0.70f;
+            node.Scale = Vector3.One * 0.66f;
             AddChild(node);
 
             var hash = StableHash($"detail-car:{i}");
@@ -228,7 +373,7 @@ public partial class ExternalAssetLayer : Node3D
                 Horizontal = (hash & 1) == 0,
                 LaneIndex = Math.Abs((hash >> 2) % 5),
                 Direction = ((hash >> 5) & 1) == 0 ? 1f : -1f,
-                Speed = 0.025f + Hash01(hash >> 8) * 0.018f,
+                Speed = 0.024f + Hash01(hash >> 8) * 0.020f,
                 Phase = Hash01(hash >> 14)
             });
         }
@@ -243,7 +388,7 @@ public partial class ExternalAssetLayer : Node3D
             .OrderByDescending(c => c.IsPlayerPartner)
             .ThenByDescending(c => c.PlayerFamiliarity)
             .ThenBy(c => c.Id)
-            .Take(30)
+            .Take(48)
             .ToArray();
 
         for (var i = 0; i < citizens.Length; i++)
@@ -255,11 +400,12 @@ public partial class ExternalAssetLayer : Node3D
             var anchor = new Node3D { Name = $"Citizen_{citizen.Id}" };
             AddChild(anchor);
 
-            model.Scale = Vector3.One * 0.58f;
+            model.Scale = Vector3.One * 0.56f;
             anchor.AddChild(model);
 
             var animation = FindAnimationPlayer(model);
-            PlayBestAnimation(animation, "walk");
+            RegisterAnimations(animation);
+            PlayContextAnimation(animation, citizen.CurrentActivity, citizen.Id);
 
             var area = new Area3D
             {
@@ -299,8 +445,20 @@ public partial class ExternalAssetLayer : Node3D
                 Edge = ((hash >> 2) & 1) == 0 ? 4.72f : -4.72f,
                 Speed = 0.010f + Hash01(hash >> 7) * 0.008f,
                 Phase = Hash01(hash >> 12),
-                Animation = animation
+                Animation = animation,
+                LastActivity = citizen.CurrentActivity
             });
+        }
+    }
+
+    private void RegisterAnimations(AnimationPlayer? player)
+    {
+        if (player is null) return;
+        foreach (var name in player.GetAnimationList())
+        {
+            var value = name.ToString();
+            if (!string.IsNullOrWhiteSpace(value) && !value.Contains("RESET", StringComparison.OrdinalIgnoreCase))
+                _animationCatalog.Add(value);
         }
     }
 
@@ -334,35 +492,34 @@ public partial class ExternalAssetLayer : Node3D
         return null;
     }
 
-    private static void PlayBestAnimation(AnimationPlayer? player, string preferredToken)
+    private static void PlayContextAnimation(AnimationPlayer? player, string activity, int selector)
     {
         if (player is null) return;
+        var all = player.GetAnimationList()
+            .Where(name => !name.ToString().Contains("RESET", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        if (all.Length == 0) return;
 
-        var animations = player.GetAnimationList();
-        if (animations.Length == 0) return;
-
-        var selected = animations[0];
-        var found = false;
-
-        foreach (var name in animations)
+        var tokens = activity switch
         {
-            if (!name.ToString().Contains(preferredToken, StringComparison.OrdinalIgnoreCase)) continue;
-            selected = name;
-            found = true;
-            break;
-        }
+            "Dormindo" => new[] { "sleep", "lie", "idle" },
+            "Trabalhando" => new[] { "work", "interact", "type", "idle" },
+            "Estudando" => new[] { "sit", "read", "idle" },
+            "Lazer" => new[] { "walk", "wave", "dance", "idle" },
+            "Socializando" => new[] { "wave", "talk", "idle", "walk" },
+            "Exercitando-se" => new[] { "run", "jog", "walk" },
+            "Deslocando-se" => new[] { "walk", "jog", "run" },
+            _ => new[] { "idle", "walk" }
+        };
 
-        if (!found)
-        {
-            foreach (var name in animations)
-            {
-                if (!name.ToString().Contains("idle", StringComparison.OrdinalIgnoreCase)) continue;
-                selected = name;
-                break;
-            }
-        }
+        var candidates = all
+            .Where(name => tokens.Any(token => name.ToString().Contains(token, StringComparison.OrdinalIgnoreCase)))
+            .ToArray();
 
-        player.Play(selected);
+        var pool = candidates.Length > 0 ? candidates : all;
+        var selected = pool[Math.Abs(selector) % pool.Length];
+        if (player.CurrentAnimation != selected)
+            player.Play(selected);
     }
 
     private static Vector3 DistrictPosition(DistrictState district) =>
