@@ -114,7 +114,7 @@ public static class LifeActions
         state.CurrentHour = (state.CurrentHour + 1) % 24;
 
         UpdatePlayerHour(state, forcedPlayerActivity);
-        UpdateCitizenHour(state);
+        SystemicSimulation.UpdateCitizensHour(state);
 
         if (state.CurrentHour == 0)
             engine.AdvanceOneDay();
@@ -128,6 +128,9 @@ public static class LifeActions
 
         p.Hunger = Math.Clamp(p.Hunger + 0.9m, 0m, 100m);
         p.Social = Math.Clamp(p.Social - 0.12m, 0m, 100m);
+        p.Hygiene = Math.Clamp(p.Hygiene - 0.20m, 0m, 100m);
+        p.Fun = Math.Clamp(p.Fun - 0.10m, 0m, 100m);
+        p.Comfort = Math.Clamp(p.Comfort - 0.05m, 0m, 100m);
 
         switch (activity)
         {
@@ -135,6 +138,7 @@ public static class LifeActions
                 p.Energy = Math.Clamp(p.Energy + 5.2m, 0m, 100m);
                 p.Stress = Math.Clamp(p.Stress - 1.1m, 0m, 100m);
                 p.Health = Math.Clamp(p.Health + 0.12m, 0m, 100m);
+                p.Comfort = Math.Clamp(p.Comfort + 0.55m, 0m, 100m);
                 break;
 
             case "Trabalhando":
@@ -153,11 +157,13 @@ public static class LifeActions
                 p.Energy = Math.Clamp(p.Energy - 0.7m, 0m, 100m);
                 p.Social = Math.Clamp(p.Social + 2.2m, 0m, 100m);
                 p.Happiness = Math.Clamp(p.Happiness + 0.8m, 0m, 100m);
+                p.Fun = Math.Clamp(p.Fun + 0.9m, 0m, 100m);
                 break;
 
             case "Exercitando-se":
                 p.Energy = Math.Clamp(p.Energy - 2.0m, 0m, 100m);
                 p.Fitness = Math.Clamp(p.Fitness + 0.7m, 0m, 100m);
+                p.Hygiene = Math.Clamp(p.Hygiene - 0.7m, 0m, 100m);
                 break;
 
             default:
@@ -173,6 +179,10 @@ public static class LifeActions
         }
         if (p.Energy < 15m)
             p.Stress = Math.Clamp(p.Stress + 0.8m, 0m, 100m);
+        if (p.Hygiene < 20m)
+            p.Happiness = Math.Clamp(p.Happiness - 0.25m, 0m, 100m);
+        if (p.Fun < 18m)
+            p.Stress = Math.Clamp(p.Stress + 0.25m, 0m, 100m);
     }
 
     private static string ResolvePlayerActivity(GameState state)
