@@ -84,6 +84,11 @@ public static class LifeActions
         p.Stress = Math.Clamp(p.Stress - hours * 0.8m, 0m, 100m);
     }
 
+    internal static void AdvanceActivity(this SimulationEngine engine, int hours, string activity)
+    {
+        for (var i = 0; i < hours; i++) AdvanceOneHour(engine, activity);
+    }
+
     private static void AdvanceOneHour(SimulationEngine engine, string? forcedPlayerActivity)
     {
         var state = engine.State;
@@ -95,6 +100,7 @@ public static class LifeActions
 
         if (state.CurrentHour == 0)
             engine.AdvanceOneDay();
+        EverydayLife.Tick(state);
     }
 
     private static void UpdatePlayerHour(GameState state, string? forcedActivity)
@@ -168,7 +174,7 @@ public static class LifeActions
 
         foreach (var citizen in state.Citizens.Where(c => c.Alive))
         {
-            var activity = ResolveCitizenActivity(citizen, hour);
+            var activity = CitizenDecisions.Choose(state, citizen);
             citizen.CurrentActivity = activity;
 
             citizen.Hunger = Math.Clamp(citizen.Hunger + 0.55m, 0m, 100m);
@@ -190,6 +196,15 @@ public static class LifeActions
                     citizen.Stress = Math.Clamp(citizen.Stress + 0.25m, 0m, 100m);
                     break;
 
+                case "Socializando":
+                    citizen.Happiness = Math.Clamp(citizen.Happiness + 0.5m, 0m, 100m);
+                    citizen.Stress = Math.Clamp(citizen.Stress - 0.4m, 0m, 100m);
+                    citizen.Energy = Math.Clamp(citizen.Energy - 0.5m, 0m, 100m);
+                    break;
+                case "Exercitando-se":
+                    citizen.Stress = Math.Clamp(citizen.Stress - 0.8m, 0m, 100m);
+                    citizen.Energy = Math.Clamp(citizen.Energy - 2m, 0m, 100m);
+                    break;
                 case "Lazer":
                     citizen.Happiness = Math.Clamp(citizen.Happiness + 0.35m, 0m, 100m);
                     citizen.Stress = Math.Clamp(citizen.Stress - 0.35m, 0m, 100m);
@@ -198,15 +213,7 @@ public static class LifeActions
         }
     }
 
-    private static string ResolveCitizenActivity(CitizenState citizen, int hour)
-    {
-        if (hour is >= 0 and < 6) return "Dormindo";
-        if (citizen.AgeYears is >= 6 and <= 22 && hour is >= 8 and < 15) return "Estudando";
-        if (citizen.EmployedCompanyId is not null && hour is >= 8 and < 17) return "Trabalhando";
-        if (hour is 7 or 17) return "Deslocando-se";
-        if (hour is >= 18 and <= 21) return citizen.Sociability > 0.55m ? "Lazer" : "Em casa";
-        return "Em casa";
-    }
+
 }
 
 public static class BusinessActions

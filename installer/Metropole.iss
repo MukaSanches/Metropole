@@ -1,5 +1,5 @@
 #define MyAppName "METRÓPOLE ∞"
-#define MyAppVersion "1.8.0"
+#define MyAppVersion "1.9.0"
 #define MyAppPublisher "METRÓPOLE"
 #define MyAppExeName "Metropole.exe"
 
@@ -14,13 +14,13 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=..\dist
-OutputBaseFilename=Metropole-1.8.0-Setup
+OutputBaseFilename=Metropole-1.9.0-Setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=lowest
 SetupLogging=yes
-VersionInfoVersion=1.8.0.0
+VersionInfoVersion=1.9.0.0
 VersionInfoProductName={#MyAppName}
 VersionInfoProductVersion={#MyAppVersion}
 VersionInfoDescription=Simulador sistêmico de sociedade e economia

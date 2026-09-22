@@ -1,3 +1,20 @@
+# METRÓPOLE ∞ — 1.9 Vida e escolhas
+
+## 1.9.0 — Vida e escolhas
+
+- Nova tela Cotidiano com 18 atividades, 5 necessidades, 3 rotinas executáveis, prática de competências, 5 marcos e diário limitado a 64 registros.
+- Cada ação tem duração, custo, condições e efeitos reais; repetir a mesma ação exige intervalo de 4h. Custos são transferidos à tesouraria.
+- Convites semanais contextuais para reparos, descanso ou comunidade; aceitar executa a atividade, recusar preserva o tempo.
+- Decisões horárias dos cidadãos com prioridades de descanso, escola, emprego, convivência, estudo e exercício, sensíveis a personalidade, chuva e fim de semana; explicação na ficha.
+- Save schema 3 com migração não destrutiva dos schemas 1/2. Rotina e diário persistentes; sucessão preserva casa/diário e reinicia a prática pessoal.
+- Seis novos grupos de testes: efeitos e custos, rotinas/prática, relógio, migração real, decisões e determinismo/eventos. Validação do executável inclui Cotidiano.
+
+Limites: atividades ocorrem pela interface e pelo relógio simulado; não há novos interiores exploráveis ou animação exclusiva para cada atividade. Os cidadãos usam regras locais determinísticas, sem IA generativa. A versão não representa todas as atividades possíveis da vida real. Não há benchmark de FPS em hardware do jogador.
+
+Abra **Cotidiano** na navegação lateral. Escolha uma atividade ou execute uma rotina. Confira duração, custo e bloqueios antes de agir. O diário registra escolhas; a ficha de cada cidadão explica sua atividade.
+
+### Versões anteriores
+
 # METRÓPOLE ∞ — 1.8 Living Streets
 
 Evolução da base 1.7, mantendo simulação, saves e fallback gráfico existentes.

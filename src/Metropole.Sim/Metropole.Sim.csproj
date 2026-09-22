@@ -7,6 +7,6 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AssemblyName>Metropole.Sim</AssemblyName>
     <RootNamespace>Metropole.Sim</RootNamespace>
-    <Version>1.7.0</Version>
+    <Version>1.9.0</Version>
   </PropertyGroup>
 </Project>

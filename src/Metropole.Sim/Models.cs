@@ -2,9 +2,9 @@ namespace Metropole.Sim;
 
 public sealed class GameState
 {
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;
-    public string RulesVersion { get; set; } = "1.5.0";
+    public string RulesVersion { get; set; } = "1.9.0";
     public long Seed { get; set; }
     public int CurrentDay { get; set; }
     public int CurrentHour { get; set; } = 8;
@@ -18,6 +18,7 @@ public sealed class GameState
     public List<CompanyState> Companies { get; set; } = [];
     public List<ProductMarketState> Markets { get; set; } = [];
     public List<HistoryEvent> History { get; set; } = [];
+    public EverydayLifeState Life { get; set; } = new();
     public AaaWorldState Aaa { get; set; } = new();
     public int NextCitizenId { get; set; } = 1;
     public int NextCompanyId { get; set; } = 1;
@@ -122,6 +123,7 @@ public sealed class CitizenState
     public string PlayerRelationshipStatus { get; set; } = "Desconhecido";
     public bool IsPlayerPartner { get; set; }
     public int LastPlayerInteractionDay { get; set; } = -9999;
+    public string DecisionReason { get; set; } = "Rotina habitual";
     public int LastCareerChangeDay { get; set; }
     public bool Alive { get; set; } = true;
     public int AgeYears => AgeDays / 365;
