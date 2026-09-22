@@ -10,6 +10,7 @@ var tests = new List<(string Name, Action Run)>
     ("ações jogáveis preservam invariantes", TestPlayableActions),
     ("relógio horário e vida do jogador", TestHourlyLife),
     ("branding, estratégia e finanças empresariais", TestDeepBusiness),
+    ("living city: LOD, relações, propriedades e tráfego", TestLivingCityCore),
     ("matriz multi-seed de estabilidade econômica", TestEconomyStressMatrix),
     ("save/load atômico", TestSaveRoundTrip),
     ("simulação longa sem invariantes quebradas", TestLongRun)
@@ -157,6 +158,43 @@ static void TestDeepBusiness()
 }
 
 
+static void TestLivingCityCore()
+{
+    var engine = new SimulationEngine(WorldGenerator.Generate(1600, "Living City"));
+    var state = engine.State;
+
+    Check(state.LivingCity.Initialized, "Living City não foi inicializado");
+    Check(state.Citizens.All(c => c.LivingCityInitialized), "há cidadão sem estado Living City");
+    Check(state.LivingCity.Properties.Count > 100, "poucos imóveis persistentes foram gerados");
+    Check(state.LivingCity.Vehicles.Count > 20, "poucos veículos persistentes foram gerados");
+    Check(LivingCityCatalog.Affordances.Count >= 12, "catálogo de affordances incompleto");
+
+    var m = state.LivingCity.LastMetrics;
+    Check(m.AbstractAgents + m.RegionalAgents + m.ActiveAgents + m.InteractiveAgents == state.Population,
+        "LOD populacional não cobre toda a população");
+
+    var citizen = state.Citizens.First(c => c.Alive && c.DistrictId == state.Player.DistrictId);
+    LivingCitySystems.FocusCitizen(state, citizen.Id);
+    Check(citizen.SimulationLevel == SimulationDetailLevel.Interactive, "foco não promoveu cidadão para nível interativo");
+
+    var local = LivingCitySystems.GetCitizensNearDistrict(state, state.Player.DistrictId, 0);
+    Check(local.Count > 0 && local.Any(c => c.Id == citizen.Id), "índice espacial por distrito falhou");
+
+    var batch = LivingCitySystems.GetScheduledBatch(state, 64);
+    Check(batch.Count == 64, "scheduler não respeitou orçamento");
+    Check(batch.DistinctBy(c => c.Id).Count() == batch.Count, "scheduler repetiu cidadão no mesmo lote");
+
+    engine.AdvanceDays(45);
+    Check(state.LivingCity.Events.Count > 0, "event stream não registrou eventos");
+    Check(state.Citizens.Any(c => c.Relationships.Count > 0), "grafo social não evoluiu");
+    Check(state.Citizens.All(c => c.Needs.Health is >= 0m and <= 100m), "necessidade de saúde saiu do intervalo");
+    Check(state.Citizens.All(c => !string.IsNullOrWhiteSpace(c.CurrentGoal)), "há cidadão sem objetivo");
+    Check(state.LivingCity.Regions.Count == state.Districts.Count, "regiões não acompanham distritos");
+    Check(state.LivingCity.LastMetrics.ScheduledUpdates > 0, "scheduler não processou atualizações");
+
+    SimulationValidator.Validate(state);
+}
+
 static void TestEconomyStressMatrix()
 {
     var seeds = new long[] { 11, 73, 707, 2026, 8080, 424242, 20260921, 998877 };
@@ -198,6 +236,11 @@ static void TestSaveRoundTrip()
     Check(loaded.Seed == 123456, "seed não preservada");
     Check(loaded.Population == engine.State.Population, "população não preservada");
     Check(loaded.Player.Cash == engine.State.Player.Cash, "caixa do jogador não preservado");
+    Check(loaded.LivingCity.Initialized, "Living City não persistiu");
+    Check(loaded.LivingCity.Properties.Count == engine.State.LivingCity.Properties.Count, "imóveis não persistiram");
+    Check(loaded.LivingCity.Vehicles.Count == engine.State.LivingCity.Vehicles.Count, "veículos não persistiram");
+    Check(loaded.Citizens.Sum(c => c.Relationships.Count) == engine.State.Citizens.Sum(c => c.Relationships.Count),
+        "relações sociais não persistiram");
     Directory.Delete(dir, true);
 }
 
