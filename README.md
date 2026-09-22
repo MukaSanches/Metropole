@@ -2,6 +2,41 @@
 
 METRÓPOLE ∞ é um simulador sistêmico para Windows em que vida pessoal, relacionamentos, trabalho, empresas, mercados, bairros e cidadãos evoluem continuamente.
 
+## Versão 1.7.0 — Visual Leap
+
+A 1.7 preserva a simulação sistêmica da 1.6 e concentra o ciclo em apresentação, variedade visual e animação.
+
+### Cidade e assets
+
+- biblioteca urbana CC0 ampliada com dezenas de edifícios comerciais e industriais;
+- oito residências KayKit e mobiliário urbano CC0;
+- variedade ampliada de carros, utilitários e veículos de serviço;
+- equipamentos e props industriais;
+- cinco edifícios 3D detalhados por distrito;
+- até 48 veículos detalhados e 48 cidadãos detalhados;
+- props distribuídos conforme o perfil do distrito;
+- iluminação pública noturna adaptativa;
+- HDRI/PBR, chuva, reflexos, SSAO, SSIL, SSR, glow e fog continuam adaptativos.
+
+### Animação
+
+- todos os clips válidos encontrados nos personagens importados são catalogados;
+- seleção contextual por atividade;
+- deslocamento prioriza walk/jog/run;
+- lazer e socialização priorizam variações compatíveis como wave/dance/idle;
+- trabalho e estudo procuram clips de interação antes do fallback;
+- nenhum clip inexistente é inventado.
+
+### Menu principal
+
+- cidade 3D viva como fundo;
+- câmera cinematográfica suave;
+- tráfego e pedestres animados;
+- continuar partida e criar novo mundo;
+- créditos/licenças;
+- saída do jogo;
+- o menu 3D faz parte da validação automática da release.
+
 ## Versão 1.6.0 — AAA Simulation Core
 
 A 1.6 preserva o renderer, áudio e vida social da 1.5 e adiciona uma camada persistente de simulação de vida preparada para escalar sem transformar cada cidadão em um Node 3D.
@@ -128,6 +163,7 @@ A regra continua sendo: população lógica não é população renderizada.
 - GLB/glTF + AnimationPlayer
 - Poly Haven PBR/HDRI CC0
 - Kenney CC0
+- KayKit CC0
 - OpenGameArt CC0
 - Inno Setup para Windows
 
@@ -168,5 +204,6 @@ godot --headless --path src/Metropole.Game --export-release Windows build/Metrop
 
 - `skills/godot-master/SKILL.md`
 - `docs/GODOT_VISUAL_MECHANICS_ROADMAP.md`
+- `docs/EXTERNAL_ASSETS_V1.7.md`
 - `docs/EXTERNAL_ASSETS_V1.5.md`
 - `THIRD_PARTY_NOTICES.md`

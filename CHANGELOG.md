@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.7.0 - 2026-09-22
+
+### Visual Leap
+- menu principal 3D com cidade viva, câmera cinematográfica, veículos e pedestres animados;
+- expansão da biblioteca urbana CC0;
+- 19 variantes comerciais e 20 industriais disponíveis ao renderer detalhado;
+- 8 residências KayKit e novos props urbanos;
+- 16 tipos de veículos detalhados;
+- props industriais Kenney Factory;
+- 5 edifícios detalhados por distrito;
+- até 48 veículos detalhados e 48 cidadãos detalhados;
+- catálogo de clips importados e animação contextual por atividade;
+- iluminação pública noturna adaptativa;
+- perfis gráficos e fallback leve preservados;
+- CI passa a validar menu 3D, assets expandidos, export, instalação e execução pós-instalação.
+
+
 ## 1.6.0 - 2026-09-22
 
 ### AAA Simulation Core
