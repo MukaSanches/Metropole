@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.6.0 - 2026-09-22
+
+### Vida sistêmica
+- Population LOD com níveis Interactive, Active, Regional e Abstract;
+- orçamento lógico de cidadãos próximos sem converter toda a população em Nodes 3D;
+- cadence de atualização agregada para população regional e abstrata;
+- Utility AI para trabalho, estudo, sono, alimentação, higiene, socialização, lazer e rotina;
+- objetivo atual persistente em jogador e cidadãos;
+- saúde, higiene, necessidade social, diversão e conforto adicionados ao modelo.
+
+### Relações e moradia
+- grafo social persistente com familiaridade, amizade, confiança, atração, respeito, ressentimento e romance;
+- interações sociais limitadas por orçamento e indexadas para long-runs;
+- memórias sociais com peso emocional, importância, decaimento e limite;
+- households materializados como moradias lógicas com moradores, capacidade, qualidade e aluguel de referência.
+
+### Interações
+- catálogo de affordances data-driven;
+- ações contextuais de dormir, comer, banho, relaxamento, socialização e estudo;
+- painel Vida exibe novas necessidades, objetivo e diagnóstico da simulação;
+- painel Pessoas exibe objetivo e nível de detalhe de cada cidadão em destaque.
+
+### Persistência
+- schema de save elevado para 2;
+- migração automática de saves schema 1 da 1.5;
+- backup atômico preservado.
+
+### QA e performance
+- testes de LOD, Utility AI, affordances, relações, moradias e migração;
+- testes econômicos e long-run existentes mantidos;
+- grafo social indexado por par e limitado para evitar crescimento indefinido;
+- nenhuma dependência third-party nova adicionada ao core 1.6.
+
 ## 1.5.0 - 2026-09-21
 
 ### Acabamento 3D
