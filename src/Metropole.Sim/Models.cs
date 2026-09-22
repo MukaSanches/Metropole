@@ -2,7 +2,7 @@ namespace Metropole.Sim;
 
 public sealed class GameState
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;
     public string RulesVersion { get; set; } = "1.5.0";
     public long Seed { get; set; }
@@ -18,6 +18,7 @@ public sealed class GameState
     public List<CompanyState> Companies { get; set; } = [];
     public List<ProductMarketState> Markets { get; set; } = [];
     public List<HistoryEvent> History { get; set; } = [];
+    public AaaWorldState Aaa { get; set; } = new();
     public int NextCitizenId { get; set; } = 1;
     public int NextCompanyId { get; set; } = 1;
 

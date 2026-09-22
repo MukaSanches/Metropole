@@ -91,6 +91,7 @@ public static class LifeActions
 
         UpdatePlayerHour(state, forcedPlayerActivity);
         UpdateCitizenHour(state);
+        engine.AdvanceAaaHourlyTick();
 
         if (state.CurrentHour == 0)
             engine.AdvanceOneDay();

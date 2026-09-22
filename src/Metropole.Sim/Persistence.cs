@@ -12,7 +12,9 @@ public static class SaveStore
 
     public static void Save(string path, GameState state)
     {
+        MigrateSchema(state);
         SimulationValidator.Validate(state);
+        AaaSimulationValidator.Validate(state);
         var directory = Path.GetDirectoryName(path);
         if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
 
@@ -23,8 +25,10 @@ public static class SaveStore
 
         var validation = JsonSerializer.Deserialize<GameState>(File.ReadAllText(tempPath), Options)
             ?? throw new InvalidDataException("Falha ao validar save temporário.");
+        MigrateSchema(validation);
         ValidateSchema(validation);
         SimulationValidator.Validate(validation);
+        AaaSimulationValidator.Validate(validation);
 
         if (File.Exists(path)) File.Copy(path, backupPath, true);
         File.Move(tempPath, path, true);
@@ -47,9 +51,21 @@ public static class SaveStore
         if (!File.Exists(path)) throw new FileNotFoundException("Save não encontrado.", path);
         var state = JsonSerializer.Deserialize<GameState>(File.ReadAllText(path), Options)
             ?? throw new InvalidDataException("Save vazio ou inválido.");
+        MigrateSchema(state);
         ValidateSchema(state);
         SimulationValidator.Validate(state);
+        AaaSimulationValidator.Validate(state);
         return state;
+    }
+
+    private static void MigrateSchema(GameState state)
+    {
+        if (state.SchemaVersion == 1)
+        {
+            state.SchemaVersion = 2;
+            state.RulesVersion = "1.6.0";
+            if (state.Aaa is null) state.Aaa = new AaaWorldState();
+        }
     }
 
     private static void ValidateSchema(GameState state)
@@ -58,6 +74,6 @@ public static class SaveStore
             throw new InvalidDataException($"Save usa schema futuro {state.SchemaVersion}.");
         if (state.SchemaVersion < 1)
             throw new InvalidDataException($"Schema legado não suportado: {state.SchemaVersion}.");
-        // Schema 1 é o schema inicial. Migrações futuras entram aqui antes da validação.
+        // Schema 1 é migrado para schema 2 antes desta validação.
     }
 }
