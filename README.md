@@ -1,5 +1,21 @@
 # METRÓPOLE ∞ — 1.9 Vida e escolhas
 
+## AAA Visual Overhaul — rendering real-time
+
+A cidade premium foi refeita para aproximar o jogo da referência visual aprovada **sem usar imagem pré-renderizada**. O que aparece no mapa é rendering 3D real do Godot:
+
+- câmera em perspectiva e composição aérea cinematográfica;
+- Forward+ Auto/Ultra em hardware compatível;
+- fachadas PBR procedurais com vidro, janelas e emissão noturna;
+- volumes de cobertura, skyline mais alto e menos aparência de blocos simples;
+- TAA/MSAA, SSAO, SSIL, SSR, glow, AGX e fog adaptativos;
+- faixas de pedestre, geometria de postes/luminárias e ruas mais detalhadas;
+- árvores com copas compostas;
+- mais edifícios CC0, props, veículos e cidadãos detalhados;
+- queda automática de qualidade se o frame time subir, preservando gameplay e fallback leve.
+
+Detalhes técnicos: `docs/AAA_VISUAL_OVERHAUL_V1.9.md`.
+
 ## 1.9.0 — Vida e escolhas
 
 - Nova tela Cotidiano com 18 atividades, 5 necessidades, 3 rotinas executáveis, prática de competências, 5 marcos e diário limitado a 64 registros.

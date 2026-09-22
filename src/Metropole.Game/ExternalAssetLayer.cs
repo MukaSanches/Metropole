@@ -207,8 +207,8 @@ public partial class ExternalAssetLayer : Node3D
         var buildingsVisible = quality switch
         {
             VisualQuality.Ultra => _buildings.Count,
-            VisualQuality.High => Math.Min(_buildings.Count, 45),
-            VisualQuality.Medium => Math.Min(_buildings.Count, 27),
+            VisualQuality.High => Math.Min(_buildings.Count, 60),
+            VisualQuality.Medium => Math.Min(_buildings.Count, 34),
             _ => 0
         };
         for (var i = 0; i < _buildings.Count; i++)
@@ -217,8 +217,8 @@ public partial class ExternalAssetLayer : Node3D
         var propsVisible = quality switch
         {
             VisualQuality.Ultra => _props.Count,
-            VisualQuality.High => Math.Min(_props.Count, 72),
-            VisualQuality.Medium => Math.Min(_props.Count, 36),
+            VisualQuality.High => Math.Min(_props.Count, 120),
+            VisualQuality.Medium => Math.Min(_props.Count, 58),
             _ => 0
         };
         for (var i = 0; i < _props.Count; i++)
@@ -226,9 +226,9 @@ public partial class ExternalAssetLayer : Node3D
 
         var vehicleCount = quality switch
         {
-            VisualQuality.Ultra => 48,
-            VisualQuality.High => 34,
-            VisualQuality.Medium => 18,
+            VisualQuality.Ultra => 64,
+            VisualQuality.High => 46,
+            VisualQuality.Medium => 24,
             _ => 0
         };
         for (var i = 0; i < _vehicles.Count; i++)
@@ -236,9 +236,9 @@ public partial class ExternalAssetLayer : Node3D
 
         var peopleCount = quality switch
         {
-            VisualQuality.Ultra => 48,
-            VisualQuality.High => 32,
-            VisualQuality.Medium => 16,
+            VisualQuality.Ultra => 64,
+            VisualQuality.High => 44,
+            VisualQuality.Medium => 22,
             _ => 0
         };
         _peopleBudget = peopleCount;
@@ -373,9 +373,9 @@ public partial class ExternalAssetLayer : Node3D
             var commercial = district.WealthIndex > 1.05m || d == 0;
             var pool = industrial ? IndustrialBuildings : commercial ? CommercialBuildings : ResidentialBuildings;
 
-            for (var i = 0; i < 5; i++)
+            for (var i = 0; i < 7; i++)
             {
-                var scenePath = pool[(d * 5 + i) % pool.Length];
+                var scenePath = pool[(d * 7 + i) % pool.Length];
                 var node = InstantiateScene(scenePath);
                 if (node is null) continue;
 
@@ -385,7 +385,9 @@ public partial class ExternalAssetLayer : Node3D
                     1 => new Vector3(3.6f, 0.20f, 3.4f),
                     2 => new Vector3(3.5f, 0.20f, -3.4f),
                     3 => new Vector3(-3.6f, 0.20f, 3.3f),
-                    _ => new Vector3(0.2f, 0.20f, 2.9f)
+                    4 => new Vector3(0.2f, 0.20f, 2.9f),
+                    5 => new Vector3(-1.85f, 0.20f, 0.25f),
+                    _ => new Vector3(1.95f, 0.20f, -0.35f)
                 };
 
                 node.Position = center + offset;
@@ -406,7 +408,7 @@ public partial class ExternalAssetLayer : Node3D
             var center = DistrictPosition(district);
             var industrial = district.LogisticsIndex > 1.12m;
             var pool = industrial ? IndustrialProps : UrbanProps;
-            var count = industrial ? 8 : 10;
+            var count = industrial ? 14 : 18;
 
             for (var i = 0; i < count; i++)
             {
@@ -428,7 +430,7 @@ public partial class ExternalAssetLayer : Node3D
 
     private void BuildDetailedVehicles()
     {
-        const int count = 48;
+        const int count = 64;
         for (var i = 0; i < count; i++)
         {
             var node = InstantiateScene(VehicleScenes[i % VehicleScenes.Length]);
@@ -459,7 +461,7 @@ public partial class ExternalAssetLayer : Node3D
             .OrderByDescending(c => c.IsPlayerPartner)
             .ThenByDescending(c => c.PlayerFamiliarity)
             .ThenBy(c => c.Id)
-            .Take(48)
+            .Take(64)
             .ToArray();
 
         for (var i = 0; i < citizens.Length; i++)

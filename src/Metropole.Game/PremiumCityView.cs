@@ -19,6 +19,10 @@ public partial class PremiumCityView : Control
     private StandardMaterial3D? _pavementMaterial;
     private Sky? _realisticSky;
     private readonly List<OmniLight3D> _streetLights = [];
+    private readonly List<ShaderMaterial> _facadeMaterials = [];
+    private MultiMeshInstance3D? _crosswalks;
+    private MultiMeshInstance3D? _streetPoles;
+    private MultiMeshInstance3D? _streetBulbs;
 
     private readonly List<(MultiMeshInstance3D Node, int FullCount)> _scalableGroups = [];
     private MultiMeshInstance3D? _vehicles;
@@ -190,7 +194,11 @@ public partial class PremiumCityView : Control
         {
             OwnWorld3D = true,
             PhysicsObjectPicking = true,
-            RenderTargetUpdateMode = SubViewport.UpdateMode.Always
+            RenderTargetUpdateMode = SubViewport.UpdateMode.Always,
+            Msaa3D = (Viewport.Msaa)2,
+            ScreenSpaceAA = (Viewport.ScreenSpaceAAEnum)2,
+            UseTaa = true,
+            MeshLodThreshold = 0.65f
         };
         _viewportContainer.AddChild(_viewport);
 
@@ -215,7 +223,11 @@ public partial class PremiumCityView : Control
             AmbientLightColor = new Color(0.44f, 0.55f, 0.62f),
             AmbientLightEnergy = 0.78f,
             ReflectedLightSource = _realisticSky is null ? Godot.Environment.ReflectionSource.Disabled : Godot.Environment.ReflectionSource.Sky,
-            TonemapMode = Godot.Environment.ToneMapper.Agx
+            TonemapMode = Godot.Environment.ToneMapper.Agx,
+            AdjustmentEnabled = true,
+            AdjustmentBrightness = 1.035f,
+            AdjustmentContrast = 1.085f,
+            AdjustmentSaturation = 1.08f
         };
 
         _asphaltMaterial = CreatePbrMaterial(
@@ -246,10 +258,10 @@ public partial class PremiumCityView : Control
 
         _camera = new Camera3D
         {
-            Projection = Camera3D.ProjectionType.Orthogonal,
-            Size = _cameraSize,
-            Near = 0.1f,
-            Far = 250f,
+            Projection = Camera3D.ProjectionType.Perspective,
+            Fov = 41.5f,
+            Near = 0.12f,
+            Far = 320f,
             Current = true
         };
         _worldRoot.AddChild(_camera);
@@ -280,6 +292,10 @@ public partial class PremiumCityView : Control
 
         _scalableGroups.Clear();
         _streetLights.Clear();
+        _facadeMaterials.Clear();
+        _crosswalks = null;
+        _streetPoles = null;
+        _streetBulbs = null;
         _vehicles = null;
         _pedestrians = null;
         _externalAssets = null;
@@ -322,28 +338,78 @@ public partial class PremiumCityView : Control
     {
         if (_worldRoot is null) return;
 
-        var asphalt = new Color(0.055f, 0.065f, 0.075f);
-        var sidewalk = new Color(0.18f, 0.20f, 0.21f);
+        var asphalt = new Color(0.045f, 0.052f, 0.060f);
+        var sidewalk = new Color(0.27f, 0.285f, 0.295f);
+        var lane = new Color(0.86f, 0.77f, 0.52f);
+        var edge = new Color(0.90f, 0.91f, 0.88f);
 
         for (var i = -2; i <= 2; i++)
         {
             var axis = i * 14f;
-            AddRoad(new Vector3(0, 0.02f, axis), new Vector3(70f, 0.20f, 2.4f), asphalt);
-            AddRoad(new Vector3(axis, 0.025f, 0), new Vector3(2.4f, 0.20f, 70f), asphalt);
+            AddRoad(new Vector3(0, 0.02f, axis), new Vector3(70f, 0.20f, 2.70f), asphalt);
+            AddRoad(new Vector3(axis, 0.025f, 0), new Vector3(2.70f, 0.20f, 70f), asphalt);
 
-            AddRoad(new Vector3(0, 0.08f, axis - 1.65f), new Vector3(70f, 0.12f, 0.48f), sidewalk);
-            AddRoad(new Vector3(0, 0.08f, axis + 1.65f), new Vector3(70f, 0.12f, 0.48f), sidewalk);
-            AddRoad(new Vector3(axis - 1.65f, 0.08f, 0), new Vector3(0.48f, 0.12f, 70f), sidewalk);
-            AddRoad(new Vector3(axis + 1.65f, 0.08f, 0), new Vector3(0.48f, 0.12f, 70f), sidewalk);
+            AddRoad(new Vector3(0, 0.09f, axis - 1.82f), new Vector3(70f, 0.13f, 0.68f), sidewalk);
+            AddRoad(new Vector3(0, 0.09f, axis + 1.82f), new Vector3(70f, 0.13f, 0.68f), sidewalk);
+            AddRoad(new Vector3(axis - 1.82f, 0.09f, 0), new Vector3(0.68f, 0.13f, 70f), sidewalk);
+            AddRoad(new Vector3(axis + 1.82f, 0.09f, 0), new Vector3(0.68f, 0.13f, 70f), sidewalk);
+
+            AddRoad(new Vector3(0, 0.151f, axis), new Vector3(70f, 0.026f, 0.055f), lane);
+            AddRoad(new Vector3(axis, 0.152f, 0), new Vector3(0.055f, 0.026f, 70f), lane);
+
+            AddRoad(new Vector3(0, 0.153f, axis - 1.15f), new Vector3(70f, 0.020f, 0.038f), edge);
+            AddRoad(new Vector3(0, 0.153f, axis + 1.15f), new Vector3(70f, 0.020f, 0.038f), edge);
+            AddRoad(new Vector3(axis - 1.15f, 0.154f, 0), new Vector3(0.038f, 0.020f, 70f), edge);
+            AddRoad(new Vector3(axis + 1.15f, 0.154f, 0), new Vector3(0.038f, 0.020f, 70f), edge);
         }
 
-        var lane = new Color(0.80f, 0.68f, 0.32f);
-        for (var i = -2; i <= 2; i++)
+        BuildCrosswalks();
+    }
+
+    private void BuildCrosswalks()
+    {
+        if (_worldRoot is null) return;
+
+        const int stripeCount = 300;
+        var mesh = new BoxMesh { Size = Vector3.One };
+        mesh.Material = new StandardMaterial3D
         {
-            var axis = i * 14f;
-            AddRoad(new Vector3(0, 0.145f, axis), new Vector3(70f, 0.025f, 0.055f), lane);
-            AddRoad(new Vector3(axis, 0.15f, 0), new Vector3(0.055f, 0.025f, 70f), lane);
+            AlbedoColor = new Color(0.92f, 0.93f, 0.90f),
+            Roughness = 0.72f,
+            Metallic = 0.0f
+        };
+
+        var multi = new MultiMesh
+        {
+            TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+            Mesh = mesh,
+            InstanceCount = stripeCount,
+            VisibleInstanceCount = stripeCount
+        };
+
+        var index = 0;
+        for (var gx = -2; gx <= 2; gx++)
+        {
+            for (var gz = -2; gz <= 2; gz++)
+            {
+                var x = gx * 14f;
+                var z = gz * 14f;
+                for (var stripe = 0; stripe < 6; stripe++)
+                {
+                    var offset = -0.90f + stripe * 0.36f;
+                    multi.SetInstanceTransform(index++, new Transform3D(
+                        ScaledBasis(new Vector3(0.16f, 0.018f, 0.92f)),
+                        new Vector3(x + offset, 0.168f, z + 1.02f)));
+                    multi.SetInstanceTransform(index++, new Transform3D(
+                        ScaledBasis(new Vector3(0.92f, 0.018f, 0.16f)),
+                        new Vector3(x + 1.02f, 0.169f, z + offset)));
+                }
+            }
         }
+
+        _crosswalks = new MultiMeshInstance3D { Multimesh = multi, Name = "Crosswalks" };
+        _worldRoot.AddChild(_crosswalks);
+        _scalableGroups.Add((_crosswalks, stripeCount));
     }
 
     private void AddRoad(Vector3 position, Vector3 size, Color color)
@@ -373,6 +439,53 @@ public partial class PremiumCityView : Control
     {
         if (_worldRoot is null) return;
 
+        const int lightCount = 50;
+        var poleMesh = new CylinderMesh
+        {
+            TopRadius = 0.045f,
+            BottomRadius = 0.060f,
+            Height = 2.65f,
+            RadialSegments = 8,
+            Material = new StandardMaterial3D
+            {
+                AlbedoColor = new Color(0.12f, 0.14f, 0.16f),
+                Roughness = 0.46f,
+                Metallic = 0.72f
+            }
+        };
+        var bulbMaterial = new StandardMaterial3D
+        {
+            AlbedoColor = new Color(0.92f, 0.76f, 0.50f),
+            Roughness = 0.22f,
+            Metallic = 0.04f,
+            EmissionEnabled = true,
+            Emission = new Color(1.0f, 0.66f, 0.30f)
+        };
+        var bulbMesh = new SphereMesh
+        {
+            Radius = 0.10f,
+            Height = 0.20f,
+            RadialSegments = 8,
+            Rings = 4,
+            Material = bulbMaterial
+        };
+
+        var poles = new MultiMesh
+        {
+            TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+            Mesh = poleMesh,
+            InstanceCount = lightCount,
+            VisibleInstanceCount = lightCount
+        };
+        var bulbs = new MultiMesh
+        {
+            TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+            Mesh = bulbMesh,
+            InstanceCount = lightCount,
+            VisibleInstanceCount = lightCount
+        };
+
+        var index = 0;
         for (var lane = -2; lane <= 2; lane++)
         {
             var axis = lane * 14f;
@@ -381,22 +494,35 @@ public partial class PremiumCityView : Control
                 var offset = i * 12f;
                 foreach (var horizontal in new[] { true, false })
                 {
+                    var p = horizontal
+                        ? new Vector3(offset, 0, axis + 1.88f)
+                        : new Vector3(axis + 1.88f, 0, offset);
+
+                    poles.SetInstanceTransform(index, new Transform3D(Basis.Identity, p + new Vector3(0, 1.325f, 0)));
+                    bulbs.SetInstanceTransform(index, new Transform3D(Basis.Identity, p + new Vector3(0, 2.70f, 0)));
+
                     var light = new OmniLight3D
                     {
                         Name = $"StreetLight_{lane}_{i}_{(horizontal ? "H" : "V")}",
-                        Position = horizontal
-                            ? new Vector3(offset, 2.8f, axis + 1.85f)
-                            : new Vector3(axis + 1.85f, 2.8f, offset),
-                        LightColor = new Color(1.0f, 0.78f, 0.48f),
+                        Position = p + new Vector3(0, 2.67f, 0),
+                        LightColor = new Color(1.0f, 0.76f, 0.44f),
                         LightEnergy = 0f,
-                        OmniRange = 7.5f,
+                        OmniRange = 7.8f,
                         ShadowEnabled = false
                     };
                     _worldRoot.AddChild(light);
                     _streetLights.Add(light);
+                    index++;
                 }
             }
         }
+
+        _streetPoles = new MultiMeshInstance3D { Multimesh = poles, Name = "StreetPoles" };
+        _streetBulbs = new MultiMeshInstance3D { Multimesh = bulbs, Name = "StreetBulbs" };
+        _worldRoot.AddChild(_streetPoles);
+        _worldRoot.AddChild(_streetBulbs);
+        _scalableGroups.Add((_streetPoles, lightCount));
+        _scalableGroups.Add((_streetBulbs, lightCount));
     }
 
     private void BuildDistricts()
@@ -432,14 +558,34 @@ public partial class PremiumCityView : Control
             .ToArray();
 
         var count = GraphicsQuality.BuildingsPerDistrict(VisualQuality.Ultra);
-        var box = new BoxMesh { Size = Vector3.One };
-        box.Material = CreateVertexColorMaterial(0.68f, 0.08f);
+        var facadeMaterial = CreateFacadeMaterial(district);
+        _facadeMaterials.Add(facadeMaterial);
 
+        var box = new BoxMesh { Size = Vector3.One, Material = facadeMaterial };
         var multi = new MultiMesh
         {
             TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
-            UseColors = true,
+            UseCustomData = true,
             Mesh = box,
+            InstanceCount = count,
+            VisibleInstanceCount = count
+        };
+
+        var roofMesh = new BoxMesh
+        {
+            Size = Vector3.One,
+            Material = new StandardMaterial3D
+            {
+                AlbedoColor = new Color(0.18f, 0.20f, 0.22f),
+                Roughness = 0.62f,
+                Metallic = 0.18f
+            }
+        };
+        var roofs = new MultiMesh
+        {
+            TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+            UseColors = true,
+            Mesh = roofMesh,
             InstanceCount = count,
             VisibleInstanceCount = count
         };
@@ -453,32 +599,44 @@ public partial class PremiumCityView : Control
             var x = -4.25f + col * 1.72f + Hash01(h) * 0.18f;
             var z = -4.20f + row * 1.85f + Hash01(h >> 7) * 0.18f;
 
-            if (Math.Abs(x) < 0.85f) x += x < 0 ? -1.0f : 1.0f;
-            if (Math.Abs(z) < 0.85f) z += z < 0 ? -1.0f : 1.0f;
+            if (Math.Abs(x) < 0.90f) x += x < 0 ? -1.05f : 1.05f;
+            if (Math.Abs(z) < 0.90f) z += z < 0 ? -1.05f : 1.05f;
 
             var wealth = (float)district.WealthIndex;
+            var skylineBoost = i == 0 && district.WealthIndex > 1.02m ? 4.6f : 0f;
             var height = company is null
-                ? 1.2f + Hash01(h >> 2) * (3.5f + wealth * 2.3f)
-                : 2.4f + (float)company.Reputation * 5.2f + (float)company.BrandAwareness * 2.2f;
+                ? 1.8f + Hash01(h >> 2) * (4.8f + wealth * 3.2f) + skylineBoost
+                : 3.3f + (float)company.Reputation * 6.4f + (float)company.BrandAwareness * 3.0f + skylineBoost * 0.5f;
 
-            var width = 0.85f + Hash01(h >> 11) * 0.55f;
-            var depth = 0.85f + Hash01(h >> 15) * 0.55f;
+            var width = 0.95f + Hash01(h >> 11) * 0.68f;
+            var depth = 0.95f + Hash01(h >> 15) * 0.68f;
+            if (i == 0 && district.WealthIndex > 1.02m)
+            {
+                width *= 1.22f;
+                depth *= 1.22f;
+            }
             if (company?.PlayerOwned == true)
             {
-                width *= 1.35f;
-                depth *= 1.35f;
-                height *= 1.20f;
+                width *= 1.38f;
+                depth *= 1.38f;
+                height *= 1.22f;
             }
 
             var position = center + new Vector3(x, 0.25f + height * 0.5f, z);
-            var basis = ScaledBasis(new Vector3(width, height, depth));
-            multi.SetInstanceTransform(i, new Transform3D(basis, position));
+            multi.SetInstanceTransform(i, new Transform3D(ScaledBasis(new Vector3(width, height, depth)), position));
 
             var color = company is null
                 ? ResidentialColor(h, district)
                 : CompanyColor(company);
+            var seed = Hash01(h >> 19);
+            multi.SetInstanceCustomData(i, new Color(color.R, color.G, color.B, seed));
 
-            multi.SetInstanceColor(i, color);
+            var roofHeight = 0.12f + Hash01(h >> 24) * 0.18f;
+            var roofSize = new Vector3(width * (0.32f + Hash01(h >> 13) * 0.30f), roofHeight, depth * (0.32f + Hash01(h >> 17) * 0.30f));
+            roofs.SetInstanceTransform(i, new Transform3D(
+                ScaledBasis(roofSize),
+                center + new Vector3(x, 0.28f + height + roofHeight * 0.5f, z)));
+            roofs.SetInstanceColor(i, color.Darkened(0.38f));
         }
 
         var node = new MultiMeshInstance3D
@@ -486,8 +644,15 @@ public partial class PremiumCityView : Control
             Multimesh = multi,
             Name = $"Buildings_{district.Id}"
         };
+        var roofNode = new MultiMeshInstance3D
+        {
+            Multimesh = roofs,
+            Name = $"Rooftops_{district.Id}"
+        };
         _worldRoot.AddChild(node);
+        _worldRoot.AddChild(roofNode);
         _scalableGroups.Add((node, count));
+        _scalableGroups.Add((roofNode, count));
     }
 
     private void BuildDistrictTrees(DistrictState district, Vector3 center)
@@ -495,26 +660,33 @@ public partial class PremiumCityView : Control
         if (_worldRoot is null) return;
 
         var count = GraphicsQuality.TreesPerDistrict(VisualQuality.Ultra);
+        var canopyCount = count * 3;
 
         var crownMesh = new SphereMesh
         {
-            Radius = 0.36f,
-            Height = 0.72f,
-            RadialSegments = 8,
-            Rings = 4
+            Radius = 0.34f,
+            Height = 0.68f,
+            RadialSegments = 12,
+            Rings = 7
         };
-        crownMesh.Material = CreateVertexColorMaterial(0.88f, 0.0f);
+        crownMesh.Material = CreateVertexColorMaterial(0.90f, 0.0f);
 
         var crowns = new MultiMesh
         {
             TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
             UseColors = true,
             Mesh = crownMesh,
-            InstanceCount = count,
-            VisibleInstanceCount = count
+            InstanceCount = canopyCount,
+            VisibleInstanceCount = canopyCount
         };
 
-        var trunkMesh = new BoxMesh { Size = Vector3.One };
+        var trunkMesh = new CylinderMesh
+        {
+            TopRadius = 0.055f,
+            BottomRadius = 0.085f,
+            Height = 0.72f,
+            RadialSegments = 7
+        };
         trunkMesh.Material = CreateVertexColorMaterial(0.96f, 0.0f);
 
         var trunks = new MultiMesh
@@ -536,18 +708,31 @@ public partial class PremiumCityView : Control
                 x = Math.Sign(x == 0 ? 1 : x) * (3.5f + Hash01(h >> 12));
 
             var p = center + new Vector3(x, 0, z);
-            crowns.SetInstanceTransform(i, new Transform3D(ScaledBasis(new Vector3(0.85f, 1.0f, 0.85f)), p + new Vector3(0, 1.05f, 0)));
-            crowns.SetInstanceColor(i, new Color(0.12f + Hash01(h >> 2) * 0.05f, 0.35f + Hash01(h >> 4) * 0.15f, 0.20f + Hash01(h >> 6) * 0.08f));
+            trunks.SetInstanceTransform(i, new Transform3D(Basis.Identity, p + new Vector3(0, 0.36f, 0)));
+            trunks.SetInstanceColor(i, new Color(0.28f, 0.20f, 0.12f));
 
-            trunks.SetInstanceTransform(i, new Transform3D(ScaledBasis(new Vector3(0.14f, 0.70f, 0.14f)), p + new Vector3(0, 0.35f, 0)));
-            trunks.SetInstanceColor(i, new Color(0.30f, 0.22f, 0.13f));
+            for (var cluster = 0; cluster < 3; cluster++)
+            {
+                var ci = i * 3 + cluster;
+                var ox = cluster == 0 ? 0f : cluster == 1 ? 0.22f : -0.20f;
+                var oz = cluster == 0 ? 0f : cluster == 1 ? -0.10f : 0.14f;
+                var y = cluster == 0 ? 1.04f : 0.92f;
+                var scale = cluster == 0 ? 1.00f : 0.78f + Hash01(h >> (3 + cluster)) * 0.18f;
+                crowns.SetInstanceTransform(ci, new Transform3D(
+                    ScaledBasis(new Vector3(0.92f * scale, 1.08f * scale, 0.92f * scale)),
+                    p + new Vector3(ox, y, oz)));
+                crowns.SetInstanceColor(ci, new Color(
+                    0.08f + Hash01(h >> 2) * 0.06f,
+                    0.30f + Hash01(h >> 4) * 0.19f,
+                    0.14f + Hash01(h >> 6) * 0.10f));
+            }
         }
 
         var crownNode = new MultiMeshInstance3D { Multimesh = crowns, Name = $"Trees_{district.Id}" };
         var trunkNode = new MultiMeshInstance3D { Multimesh = trunks, Name = $"Trunks_{district.Id}" };
         _worldRoot.AddChild(crownNode);
         _worldRoot.AddChild(trunkNode);
-        _scalableGroups.Add((crownNode, count));
+        _scalableGroups.Add((crownNode, canopyCount));
         _scalableGroups.Add((trunkNode, count));
     }
 
@@ -719,6 +904,13 @@ public partial class PremiumCityView : Control
         if (_pavementMaterial is not null)
             _pavementMaterial.Roughness = rain ? 0.52f : 0.84f;
 
+        var nightFactor = Math.Clamp(1f - daylight, 0f, 1f);
+        foreach (var facade in _facadeMaterials)
+        {
+            facade.SetShaderParameter("night_factor", nightFactor);
+            facade.SetShaderParameter("wetness", rain ? 0.82f : 0.0f);
+        }
+
         _sun.LightEnergy = 0.18f + daylight * (storm ? 0.65f : 1.42f);
         _sun.LightColor = new Color(0.50f, 0.60f, 0.82f).Lerp(new Color(1.0f, 0.89f, 0.72f), daylight);
         _sun.RotationDegrees = new Vector3(-38f - state.CurrentHour * 2.1f, -28f + state.CurrentHour * 4.0f, 0);
@@ -794,6 +986,27 @@ public partial class PremiumCityView : Control
 
         _externalAssets?.ApplyQuality(_quality);
 
+        if (_viewport is not null)
+        {
+            _viewport.UseTaa = _quality >= VisualQuality.High;
+            _viewport.Msaa3D = _quality switch
+            {
+                VisualQuality.Ultra => (Viewport.Msaa)2,
+                VisualQuality.High => (Viewport.Msaa)1,
+                _ => (Viewport.Msaa)0
+            };
+            _viewport.ScreenSpaceAA = _quality >= VisualQuality.Medium
+                ? (Viewport.ScreenSpaceAAEnum)2
+                : (Viewport.ScreenSpaceAAEnum)0;
+            _viewport.MeshLodThreshold = _quality switch
+            {
+                VisualQuality.Ultra => 0.55f,
+                VisualQuality.High => 0.85f,
+                VisualQuality.Medium => 1.35f,
+                _ => 2.1f
+            };
+        }
+
         if (_environment is not null && GraphicsQuality.RenderingMethod == "forward_plus")
         {
             _environment.SsaoEnabled = _quality >= VisualQuality.High;
@@ -808,10 +1021,26 @@ public partial class PremiumCityView : Control
     private void ApplyCamera()
     {
         if (_camera is null) return;
-        _camera.Size = _cameraSize;
-        var position = _cameraTarget + new Vector3(33f, 39f, 33f);
-        _camera.Position = position;
-        _camera.LookAt(_cameraTarget, Vector3.Up);
+
+        var distance = Math.Clamp(_cameraSize, 24f, 78f);
+        var offset = new Vector3(0.72f, 0.88f, 0.72f).Normalized() * distance;
+        _camera.Position = _cameraTarget + offset;
+        _camera.Fov = distance < 32f ? 46f : 41.5f;
+        _camera.LookAt(_cameraTarget + new Vector3(0, 1.15f, 0), Vector3.Up);
+    }
+
+    private ShaderMaterial CreateFacadeMaterial(DistrictState district)
+    {
+        var shader = GD.Load<Shader>("res://assets/shaders/building_facade.gdshader");
+        var material = new ShaderMaterial { Shader = shader };
+        var wealth = (float)Math.Clamp(district.WealthIndex, 0.7m, 1.6m);
+        var glassiness = Math.Clamp(0.22f + (wealth - 0.70f) * 0.48f, 0.18f, 0.72f);
+        material.SetShaderParameter("glassiness", glassiness);
+        material.SetShaderParameter("window_columns", district.LogisticsIndex > 1.12m ? 4.0f : 6.0f + wealth * 1.4f);
+        material.SetShaderParameter("window_rows", district.WealthIndex > 1.08m ? 12.0f : 9.0f);
+        material.SetShaderParameter("night_factor", 0.0f);
+        material.SetShaderParameter("wetness", 0.0f);
+        return material;
     }
 
     private static StandardMaterial3D CreatePbrMaterial(
