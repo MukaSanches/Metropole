@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.6.0 - 2026-09-22
+
+### AAA Simulation Core
+- simulação LOD Statistical/Regional/Active/Interactive;
+- scheduler horário em lotes;
+- necessidades ampliadas e personalidade persistente;
+- memória com decay e utility goals;
+- affordances data-driven;
+- domicílios, propriedades e veículos lógicos;
+- malha de tráfego e congestionamento por distrito;
+- agregação regional e orçamento de performance;
+- save schema 2 com migração de saves 1.5;
+- F1 com diagnóstico de população/LOD/tráfego/scheduler;
+- testes determinísticos e probe de 10.000 agentes;
+- renderer, assets, áudio e vida social da 1.5 preservados.
+
+
 ## 1.5.0 - 2026-09-21
 
 ### Realismo 3D

@@ -2,6 +2,29 @@
 
 METRÓPOLE ∞ é um simulador sistêmico para Windows em que vida pessoal, relacionamentos, trabalho, empresas, mercados, bairros e cidadãos evoluem continuamente.
 
+## Versão 1.6.0 — AAA Simulation Core
+
+A 1.6 preserva o renderer, áudio e vida social da 1.5 e adiciona uma camada persistente de simulação de vida preparada para escalar sem transformar cada cidadão em um Node 3D.
+
+### Núcleo sistêmico
+
+- quatro níveis de detalhe: Statistical, Regional, Active e Interactive;
+- scheduler horário por lotes, com cursor persistente;
+- dez necessidades por cidadão;
+- personalidade ampliada;
+- memória social/profissional com decay e limite;
+- utility goal determinístico;
+- affordances data-driven para cama, geladeira, chuveiro, banheiro, TV, computador, telefone e veículo;
+- domicílios e propriedades persistentes;
+- veículos lógicos e tráfego entre distritos;
+- agregação por região;
+- orçamento explícito de performance;
+- save schema 2 com migração de saves da 1.5;
+- painel F1 com diagnóstico da simulação;
+- probe automatizado de LOD para 10.000 agentes.
+
+A regra permanece: **simular muito e renderizar apenas o necessário**.
+
 ## Versão 1.5.0 — Realismo & Vida Social
 
 A 1.5 foi construída para resolver duas limitações da 1.4: a cidade ainda precisava de materiais/iluminação mais convincentes e a vida social precisava virar gameplay real, não apenas estatística.
