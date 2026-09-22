@@ -146,6 +146,7 @@ public static class WorldGenerator
             Cause = $"seed {seed} + regras {state.RulesVersion}"
         });
 
+        SystemicBootstrap.Ensure(state);
         SimulationValidator.Validate(state);
         return state;
     }
