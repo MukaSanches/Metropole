@@ -2,9 +2,30 @@
 
 METRÓPOLE ∞ é um simulador sistêmico para Windows em que vida pessoal, trabalho, empresas, mercados, bairros e cidadãos evoluem continuamente.
 
-## Versão 1.5.0 — Premium Polish
+## Versão 1.6.0 — Systemic Life
 
-A 1.5 é uma versão de acabamento. O objetivo não é aumentar o número de sistemas por aumentar, mas elevar a apresentação 3D ao nível de uma produção comercial mantendo o fallback para computadores modestos.
+A 1.6 preserva todo o acabamento 3D da 1.5 e amplia o núcleo de vida: cidadãos agora usam **Population LOD**, **Utility AI**, necessidades adicionais, objetivos, grafo social persistente, memórias, moradias lógicas e ações contextuais por affordance.
+
+### Vida sistêmica 1.6
+
+- quatro níveis de simulação: Interactive, Active, Regional e Abstract;
+- orçamento padrão de até 24 cidadãos interativos e 96 locais ativos;
+- cidadãos distantes continuam evoluindo com cadence agregada em vez de virarem personagens 3D completos;
+- Utility AI escolhe sono, alimentação, higiene, socialização, lazer, estudo, trabalho e rotina;
+- novas necessidades: saúde, higiene, social, diversão e conforto;
+- objetivo atual persistente por cidadão;
+- grafo social com familiaridade, amizade, confiança, atração, respeito, ressentimento e romance;
+- memórias sociais com importância e decaimento;
+- households convertidos em moradias lógicas persistentes;
+- affordances data-driven para cama, alimentação, chuveiro, sofá/TV, socialização e estudo;
+- interface Vida mostra necessidades, objetivo, affordances e diagnóstico do Population LOD;
+- saves 1.5/schema 1 migram automaticamente para schema 2.
+
+A arquitetura está detalhada em `docs/SYSTEMIC_LIFE_V1.6.md`.
+
+### Premium Polish preservado
+
+A camada visual da 1.5 continua ativa: Forward+, cidade 3D, PBR, clima, áudio, proxies detalhados, LOD gráfico e fallback para computadores modestos.
 
 ### Render premium
 
@@ -50,7 +71,7 @@ Na visão premium:
 
 ### Desempenho
 
-A política da 1.5 permanece:
+A política da 1.6 permanece:
 
 **simular muito e renderizar apenas o necessário.**
 
@@ -74,7 +95,7 @@ A build Windows precisa passar por:
 7. validação automática;
 8. validação premium forçada;
 9. validação do fallback leve;
-10. verificação de modelos, AnimationPlayer, áudio e camada 1.5;
+10. verificação de modelos, AnimationPlayer, áudio e camada sistêmica 1.6;
 11. smoke test;
 12. instalador;
 13. instalação silenciosa;
@@ -100,6 +121,7 @@ A build Windows precisa passar por:
 - `skills/godot-master/SKILL.md`
 - `docs/GODOT_VISUAL_MECHANICS_ROADMAP.md`
 - `docs/EXTERNAL_ASSETS_V1.4.md`
+- `docs/SYSTEMIC_LIFE_V1.6.md`
 
 ## Build local
 
