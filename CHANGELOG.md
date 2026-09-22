@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.9.0 — AAA Visual Overhaul
+
+- cidade premium passa de câmera ortográfica para perspectiva aérea cinematográfica;
+- Forward+ sobe o teto automático para Ultra e mantém degradação adaptativa por frame time;
+- fachadas procedurais PBR recebem janelas, vidro, emissão noturna e resposta à chuva;
+- skyline recebe maior variação de altura e volumes técnicos de cobertura;
+- árvores procedurais passam a usar copas compostas e troncos cilíndricos;
+- ruas recebem bordas de faixa e 300 faixas de pedestre via MultiMesh;
+- iluminação pública passa a ter postes e lâmpadas visíveis além das OmniLight3D;
+- TAA/MSAA/screen-space AA e mesh LOD passam a variar por perfil;
+- camada CC0 sobe para até 7 edifícios detalhados por distrito, 64 veículos e 64 cidadãos detalhados;
+- HUD recebe profundidade/sombra sutil e diagnóstico atualizado para 3D PBR;
+- nenhuma imagem pré-renderizada é usada como mapa; o visual permanece renderizado em tempo real.
+
 ## 1.9.0 — Vida e escolhas
 
 - Nova tela Cotidiano com 18 atividades, 5 necessidades, 3 rotinas executáveis, prática de competências, 5 marcos e diário limitado a 64 registros.
