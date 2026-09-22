@@ -12,6 +12,7 @@ public static class SaveStore
 
     public static void Save(string path, GameState state)
     {
+        SystemicBootstrap.UpgradeLegacySchema(state);
         SimulationValidator.Validate(state);
         var directory = Path.GetDirectoryName(path);
         if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
@@ -54,10 +55,6 @@ public static class SaveStore
 
     private static void ValidateSchema(GameState state)
     {
-        if (state.SchemaVersion > GameState.CurrentSchemaVersion)
-            throw new InvalidDataException($"Save usa schema futuro {state.SchemaVersion}.");
-        if (state.SchemaVersion < 1)
-            throw new InvalidDataException($"Schema legado não suportado: {state.SchemaVersion}.");
-        // Schema 1 é o schema inicial. Migrações futuras entram aqui antes da validação.
+        SystemicBootstrap.UpgradeLegacySchema(state);
     }
 }
