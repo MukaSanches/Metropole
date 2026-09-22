@@ -97,6 +97,23 @@ public static class LivingCitySystems
         Validate(state);
     }
 
+    public static void AdvanceHour(GameState state)
+    {
+        EnsureInitialized(state);
+        RefreshSimulationLevels(state);
+        UpdateVehicles(state);
+
+        if (state.CurrentHour % 4 == 0)
+            RefreshRegions(state);
+
+        var budget = state.LivingCity.LastMetrics.ActiveAgents > 0 ? 96 : 48;
+        foreach (var citizen in GetScheduledBatch(state, budget))
+        {
+            if (citizen.SimulationLevel is SimulationDetailLevel.Active or SimulationDetailLevel.Interactive)
+                PlanGoal(citizen);
+        }
+    }
+
     public static IReadOnlyList<CitizenState> GetCitizensNearDistrict(GameState state, int districtId, int radius)
     {
         if (radius < 0) throw new ArgumentOutOfRangeException(nameof(radius));
@@ -513,10 +530,13 @@ public static class LivingCitySystems
                 continue;
             }
 
-            var targetDistrict = owner.HomeDistrictId > 0 ? owner.HomeDistrictId : owner.DistrictId;
+            var homeDistrict = owner.HomeDistrictId > 0 ? owner.HomeDistrictId : owner.DistrictId;
+            var targetDistrict = homeDistrict;
             if (owner.EmployedCompanyId is int companyId &&
                 companies.TryGetValue(companyId, out var company) &&
-                company.Open)
+                company.Open &&
+                (owner.CurrentActivity == "Trabalhando" ||
+                 (owner.CurrentActivity == "Deslocando-se" && state.CurrentHour < 12)))
             {
                 targetDistrict = company.DistrictId;
             }
@@ -531,7 +551,7 @@ public static class LivingCitySystems
             }
 
             vehicle.Status = "Em rota";
-            vehicle.RouteProgress = Clamp01(vehicle.RouteProgress + 0.55m);
+            vehicle.RouteProgress = Clamp01(vehicle.RouteProgress + 0.45m);
             if (vehicle.RouteProgress >= 1m)
             {
                 vehicle.CurrentDistrictId = vehicle.TargetDistrictId;
