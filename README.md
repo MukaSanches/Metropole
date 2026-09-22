@@ -2,9 +2,25 @@
 
 METRÓPOLE ∞ é um simulador sistêmico para Windows em que vida pessoal, trabalho, empresas, mercados, bairros e cidadãos evoluem continuamente.
 
-## Versão 1.5.0 — Premium Polish
+## Versão 1.6.0 — Living City Core
 
-A 1.5 é uma versão de acabamento. O objetivo não é aumentar o número de sistemas por aumentar, mas elevar a apresentação 3D ao nível de uma produção comercial mantendo o fallback para computadores modestos.
+A 1.6 preserva todo o acabamento visual da 1.5 e adiciona uma camada persistente de simulação de vida: níveis de detalhe de agentes, necessidades ampliadas, personalidade, memória social, relações multidimensionais, famílias, propriedades, veículos, regiões e scheduler determinístico.
+
+### Living City Core
+
+- quatro níveis de simulação: abstrato, regional, ativo e interativo;
+- necessidades persistentes além de fome/energia: sede, higiene, banheiro, social, conforto, segurança e saúde;
+- personalidade ampliada e usada no grafo social;
+- memórias com importância e decaimento;
+- relações separadas em familiaridade, amizade, confiança, atração, respeito, ressentimento e romance;
+- vínculos familiares derivados dos domicílios existentes;
+- imóveis persistentes por domicílio;
+- frota persistente ligada a cidadãos e emprego;
+- regiões com carga de tráfego e atividade econômica;
+- affordances data-driven para cama, geladeira, banheiro, chuveiro, TV, computador, celular, clínica, restaurante e praça;
+- objetivos e ações planejadas a partir de necessidades;
+- consultas espaciais por distrito e scheduler com orçamento;
+- save/load compatível com partidas anteriores.
 
 ### Render premium
 
