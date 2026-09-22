@@ -109,6 +109,12 @@ public partial class Main : Control
             if (_audio is null || _audio.LoadedAssetCount < 8)
                 throw new InvalidOperationException($"Audio CC0 incompleto: {_audio?.LoadedAssetCount ?? 0}/8 assets carregados.");
 
+            var living = _sim.State.LivingCity;
+            if (!living.Initialized || living.Properties.Count < 100 || living.Vehicles.Count < 20)
+                throw new InvalidOperationException($"Living City incompleto: initialized={living.Initialized} properties={living.Properties.Count} vehicles={living.Vehicles.Count}.");
+            if (living.Regions.Count != _sim.State.Districts.Count)
+                throw new InvalidOperationException($"Living City regiões inválidas: {living.Regions.Count}/{_sim.State.Districts.Count}.");
+
             if (GraphicsQuality.UsePremium3D)
             {
                 if (_premiumCityView is null || _premiumCityView.DetailedAssetCount < 20)
