@@ -42,7 +42,8 @@ public static class SystemicBootstrap
         if (string.IsNullOrWhiteSpace(state.Player.CurrentGoal))
             state.Player.CurrentGoal = "Manter uma rotina equilibrada";
 
-        EnsureResidences(state);
+        if (state.Residences.Count == 0)
+            EnsureResidences(state);
         SystemicSimulation.ReclassifyPopulation(state);
         SynchronizePartnerRelations(state);
     }
@@ -267,6 +268,10 @@ public static class SystemicSimulation
 
     internal static void ProcessDailySocial(GameState state, DeterministicRng rng)
     {
+        var relationMap = state.Relationships.ToDictionary(
+            r => RelationKey(r.CitizenAId, r.CitizenBId),
+            r => r);
+
         var candidates = state.Citizens
             .Where(c => c.Alive && c.SimulationDetail is PopulationDetailLevel.Interactive or PopulationDetailLevel.Active)
             .GroupBy(c => c.DistrictId)
@@ -286,7 +291,7 @@ public static class SystemicSimulation
                 var b = people[(i + offset) % people.Length];
                 if (a.Id == b.Id) continue;
 
-                var relation = GetOrCreateRelation(state, a.Id, b.Id);
+                var relation = GetOrCreateRelation(state, a.Id, b.Id, relationMap);
                 var compatibility =
                     1m
                     - Math.Abs(a.Sociability - b.Sociability) * 0.25m
@@ -316,6 +321,38 @@ public static class SystemicSimulation
 
             if (interactions >= 28) break;
         }
+    }
+
+    private static SocialRelationState GetOrCreateRelation(
+        GameState state,
+        int citizenAId,
+        int citizenBId,
+        Dictionary<long, SocialRelationState> relationMap)
+    {
+        var a = Math.Min(citizenAId, citizenBId);
+        var b = Math.Max(citizenAId, citizenBId);
+        var key = RelationKey(a, b);
+        if (relationMap.TryGetValue(key, out var existing)) return existing;
+
+        var relation = new SocialRelationState
+        {
+            CitizenAId = a,
+            CitizenBId = b,
+            Familiarity = 0.08m,
+            Friendship = 0.02m,
+            Trust = 0.04m,
+            Respect = 0.04m
+        };
+        state.Relationships.Add(relation);
+        relationMap[key] = relation;
+        return relation;
+    }
+
+    private static long RelationKey(int citizenAId, int citizenBId)
+    {
+        var a = Math.Min(citizenAId, citizenBId);
+        var b = Math.Max(citizenAId, citizenBId);
+        return ((long)a << 32) | (uint)b;
     }
 
     internal static void DecayMemories(GameState state)
@@ -527,6 +564,15 @@ public sealed partial class SimulationEngine
             SystemicSimulation.DecayMemories(State);
 
         if (State.CurrentDay % 30 == 0)
+        {
             SystemicSimulation.RefreshResidences(State);
+            if (State.Relationships.Count > 6_000)
+            {
+                State.Relationships = State.Relationships
+                    .OrderByDescending(r => r.Romance * 2m + r.Friendship + r.Trust + r.Familiarity * 0.5m)
+                    .Take(6_000)
+                    .ToList();
+            }
+        }
     }
 }
