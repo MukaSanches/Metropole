@@ -432,7 +432,7 @@ public partial class Main : Control
             $"{metrics.ProfessionArchetypes:N0} profissões • {metrics.BusinessArchetypes:N0} negócios\n" +
             $"{metrics.Products:N0} produtos • {metrics.Events:N0} eventos combináveis",
             12, _muted));
-        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.7.0 • VISUAL LEAP", 11, _muted2, false));
+        box.AddChild(MakeLabel("METRÓPOLE ∞ 1.8.0 • LIVING STREETS", 11, _muted2, false));
     }
 
     private void BuildGameScreen()

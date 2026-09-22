@@ -12,7 +12,7 @@ public partial class ExternalAssetLayer : Node3D
         public required int LaneIndex { get; init; }
         public required float Direction { get; init; }
         public required float Speed { get; init; }
-        public required float Phase { get; init; }
+        public required float Phase { get; set; }
     }
 
     private sealed class PersonProxy
@@ -23,7 +23,7 @@ public partial class ExternalAssetLayer : Node3D
         public required bool AlongX { get; init; }
         public required float Edge { get; init; }
         public required float Speed { get; init; }
-        public required float Phase { get; init; }
+        public required float Phase { get; set; }
         public AnimationPlayer? Animation { get; init; }
         public string LastActivity { get; set; } = "";
         public int LastAnimationBucket { get; set; } = -1;
@@ -36,6 +36,11 @@ public partial class ExternalAssetLayer : Node3D
     private readonly List<PersonProxy> _people = [];
     private readonly HashSet<string> _animationCatalog = new(StringComparer.OrdinalIgnoreCase);
     private bool _built;
+    private double _lastTime = -1;
+    private VisualQuality? _appliedQuality;
+    private int _peopleBudget;
+    private readonly List<Node3D> _shopDetails = [];
+
 
     private static readonly string[] CommercialBuildings =
     [
@@ -159,9 +164,9 @@ public partial class ExternalAssetLayer : Node3D
 
     public event Action<int>? PersonSelected;
 
-    public int DetailedAssetCount => _buildings.Count + _props.Count + _vehicles.Count + _people.Count;
+    public int DetailedAssetCount => _buildings.Count + _props.Count + _shopDetails.Count + _vehicles.Count + _people.Count;
     public int BuildingAssetCount => _buildings.Count;
-    public int PropAssetCount => _props.Count;
+    public int PropAssetCount => _props.Count + _shopDetails.Count;
     public int AnimatedProxyCount => _people.Count(p => p.Animation is not null);
     public int InteractivePersonCount => _people.Count;
     public int AvailableAnimationCount => _animationCatalog.Count;
@@ -169,7 +174,7 @@ public partial class ExternalAssetLayer : Node3D
     public bool TryGetCitizenPosition(int citizenId, out Vector3 position)
     {
         var proxy = _people.FirstOrDefault(p => p.CitizenId == citizenId);
-        if (proxy is null)
+        if (proxy is null || !proxy.Node.Visible)
         {
             position = Vector3.Zero;
             return false;
@@ -188,6 +193,8 @@ public partial class ExternalAssetLayer : Node3D
 
         BuildLandmarks();
         BuildUrbanProps();
+        BuildShopDetails();
+        BuildPlazaFountains();
         BuildDetailedVehicles();
         BuildAnimatedPeople();
         ApplyQuality(quality);
@@ -195,6 +202,8 @@ public partial class ExternalAssetLayer : Node3D
 
     public void ApplyQuality(VisualQuality quality)
     {
+        if (_appliedQuality == quality) return;
+        _appliedQuality = quality;
         var buildingsVisible = quality switch
         {
             VisualQuality.Ultra => _buildings.Count,
@@ -232,13 +241,18 @@ public partial class ExternalAssetLayer : Node3D
             VisualQuality.Medium => 16,
             _ => 0
         };
-        for (var i = 0; i < _people.Count; i++)
-            _people[i].Node.Visible = i < peopleCount;
+        _peopleBudget = peopleCount;
+        for (var i = 0; i < _shopDetails.Count; i++)
+            _shopDetails[i].Visible = quality >= VisualQuality.High;
+
     }
 
     public void Tick(double time, GameState state, VisualQuality quality)
     {
         if (!_built) return;
+        var delta = _lastTime < 0 ? 0 : Math.Clamp(time - _lastTime, 0, 0.1);
+        _lastTime = time;
+        ApplyQuality(quality);
 
         var rainFactor = state.Weather.Contains("Chuva", StringComparison.OrdinalIgnoreCase) ? 0.76f : 1f;
         var rushFactor = state.CurrentHour is >= 7 and <= 9 or >= 16 and <= 19 ? 1.18f : 0.86f;
@@ -247,7 +261,8 @@ public partial class ExternalAssetLayer : Node3D
         {
             if (!proxy.Node.Visible) continue;
 
-            var phase = (float)((proxy.Phase + time * proxy.Speed * proxy.Direction * rushFactor) % 1.0);
+            proxy.Phase = (float)((proxy.Phase + delta * proxy.Speed * proxy.Direction * rushFactor * rainFactor) % 1.0);
+            var phase = proxy.Phase;
             if (phase < 0) phase += 1f;
             var travel = Mathf.Lerp(-34f, 34f, phase);
             var laneAxis = (proxy.LaneIndex - 2) * 14f + (proxy.Direction > 0 ? 0.72f : -0.72f);
@@ -261,32 +276,88 @@ public partial class ExternalAssetLayer : Node3D
         }
 
         var districts = state.Districts;
-        var citizenById = state.Citizens.Where(c => c.Alive).ToDictionary(c => c.Id);
+        // Resolve only the bounded visual population; avoid allocating a full-city dictionary per tick.
         var animationBucket = (int)(time / 8.0);
-
-        foreach (var proxy in _people)
+        for (var i = 0; i < _people.Count; i++)
         {
-            if (!proxy.Node.Visible || districts.Count == 0) continue;
+            var proxy = _people[i];
+            var citizen = i < _peopleBudget ? state.Citizens.Find(c => c.Id == proxy.CitizenId) : null;
+            var activity = citizen?.CurrentActivity ?? "";
+            var visible = citizen is { Alive: true } && districts.Count > 0 &&
+                !activity.Contains("Dorm", StringComparison.OrdinalIgnoreCase);
+            proxy.Node.Visible = visible;
+            proxy.Node.ProcessMode = visible ? ProcessModeEnum.Inherit : ProcessModeEnum.Disabled;
+            if (!visible || citizen is null) continue;
 
-            var district = districts[proxy.DistrictIndex % districts.Count];
-            var center = DistrictPosition(district);
-            var phase = (float)((proxy.Phase + time * proxy.Speed * rainFactor) % 1.0);
-            var travel = Mathf.Lerp(-4.6f, 4.6f, phase);
-
-            proxy.Node.Position = proxy.AlongX
-                ? center + new Vector3(travel, 0.12f, proxy.Edge)
-                : center + new Vector3(proxy.Edge, 0.12f, travel);
-            proxy.Node.Rotation = new Vector3(0, proxy.AlongX ? -Mathf.Pi / 2f : 0f, 0);
-
-            if (!citizenById.TryGetValue(proxy.CitizenId, out var citizen)) continue;
-            if (proxy.LastActivity == citizen.CurrentActivity && proxy.LastAnimationBucket == animationBucket) continue;
-
-            proxy.LastActivity = citizen.CurrentActivity;
+            var district = districts.Find(d => d.Id == citizen.DistrictId) ?? districts[0];
+            var moving = activity is "Deslocando-se" or "Exercitando-se" or "Lazer";
+            var running = activity == "Exercitando-se";
+            if (moving)
+                proxy.Phase = (float)((proxy.Phase + delta * proxy.Speed * rainFactor * (running ? 1.6f : 1f)) % 1.0);
+            var perimeter = proxy.Phase * 4f;
+            var side = (int)perimeter;
+            var travel = Mathf.Lerp(-4.72f, 4.72f, perimeter - side);
+            var offset = side switch
+            {
+                0 => new Vector3(travel, 0.12f, -4.72f),
+                1 => new Vector3(4.72f, 0.12f, travel),
+                2 => new Vector3(-travel, 0.12f, 4.72f),
+                _ => new Vector3(-4.72f, 0.12f, -travel)
+            };
+            proxy.Node.Position = DistrictPosition(district) + offset;
+            var yaw = -Mathf.Pi / 2f - side * Mathf.Pi / 2f;
+            proxy.Node.Rotation = new Vector3(0, Mathf.LerpAngle(proxy.Node.Rotation.Y, yaw,
+                1f - MathF.Exp(-12f * (float)delta)), 0);
+            if (proxy.Animation is not null)
+                proxy.Animation.SpeedScale = moving ? (running ? 1.3f : 1f) : 0.8f;
+            if (proxy.LastActivity == activity && proxy.LastAnimationBucket == animationBucket) continue;
+            proxy.LastActivity = activity;
             proxy.LastAnimationBucket = animationBucket;
-            PlayContextAnimation(proxy.Animation, citizen.CurrentActivity, proxy.CitizenId + animationBucket);
+            PlayContextAnimation(proxy.Animation, moving ? (running ? "Exercitando-se" : "Deslocando-se") : activity,
+                proxy.CitizenId + animationBucket);
         }
+    }
 
-        ApplyQuality(quality);
+    private void BuildPlazaFountains()
+    {
+        if (_engine is null) return;
+        var stone = new StandardMaterial3D { AlbedoColor = new Color(0.43f, 0.47f, 0.49f), Roughness = 0.85f };
+        var water = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/plaza_water.gdshader") };
+        var basinMesh = new CylinderMesh { TopRadius = 1.05f, BottomRadius = 1.12f, Height = 0.24f, RadialSegments = 24 };
+        var waterMesh = new CylinderMesh { TopRadius = 0.92f, BottomRadius = 0.92f, Height = 0.025f, RadialSegments = 24 };
+        var pedestalMesh = new CylinderMesh { TopRadius = 0.12f, BottomRadius = 0.26f, Height = 0.65f, RadialSegments = 12 };
+        foreach (var district in _engine.State.Districts)
+        {
+            if (district.LogisticsIndex > 1.12m) continue;
+            var fountain = new Node3D { Name = $"PlazaFountain_{district.Id}", Position = DistrictPosition(district) };
+            fountain.AddChild(new MeshInstance3D { Mesh = basinMesh, MaterialOverride = stone, Position = new Vector3(0, 0.22f, 0) });
+            fountain.AddChild(new MeshInstance3D { Mesh = waterMesh, MaterialOverride = water, Position = new Vector3(0, 0.355f, 0) });
+            fountain.AddChild(new MeshInstance3D { Mesh = pedestalMesh, MaterialOverride = stone, Position = new Vector3(0, 0.52f, 0) });
+            AddChild(fountain);
+            _shopDetails.Add(fountain);
+        }
+    }
+
+    private void BuildShopDetails()
+    {
+        if (_engine is null) return;
+        // Reuse the licensed 1.7 library: storefronts and terraces without additional textures.
+        string[] names = ["detail-awning", "detail-awning-wide", "detail-parasol-a", "detail-parasol-b"];
+        foreach (var district in _engine.State.Districts)
+        {
+            if (district.LogisticsIndex > 1.12m) continue;
+            for (var i = 0; i < names.Length; i++)
+            {
+                var node = InstantiateScene($"res://assets/external/kenney/city/commercial/{names[i]}.glb");
+                if (node is null) continue;
+                node.Scale = Vector3.One * 0.62f;
+                node.Position = DistrictPosition(district) + new Vector3(i < 2 ? -3.7f : 1.5f + (i - 2) * 1.5f,
+                    i < 2 ? 1.1f : 0.2f, i < 2 ? -2.4f + i * 5.6f : -1.8f);
+                node.Rotation = new Vector3(0, i == 1 ? Mathf.Pi : 0, 0);
+                AddChild(node);
+                _shopDetails.Add(node);
+            }
+        }
     }
 
     private void BuildLandmarks()
@@ -431,7 +502,7 @@ public partial class ExternalAssetLayer : Node3D
             {
                 if (@event is InputEventMouseButton mouse &&
                     mouse.ButtonIndex == MouseButton.Left &&
-                    mouse.Pressed)
+                    mouse.Pressed && anchor.Visible)
                     PersonSelected?.Invoke(selectedId);
             };
 
@@ -512,14 +583,22 @@ public partial class ExternalAssetLayer : Node3D
             _ => new[] { "idle", "walk" }
         };
 
-        var candidates = all
-            .Where(name => tokens.Any(token => name.ToString().Contains(token, StringComparison.OrdinalIgnoreCase)))
-            .ToArray();
-
-        var pool = candidates.Length > 0 ? candidates : all;
+        // Respect priority: walking must not randomly select idle and slide along the street.
+        var pool = all;
+        foreach (var token in tokens)
+        {
+            var candidates = all.Where(name => name.ToString().Contains(token, StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (candidates.Length == 0) continue;
+            pool = candidates;
+            break;
+        }
         var selected = pool[Math.Abs(selector) % pool.Length];
         if (player.CurrentAnimation != selected)
-            player.Play(selected);
+        {
+            var clip = player.GetAnimation(selected);
+            if (clip is not null) clip.LoopMode = Animation.LoopModeEnum.Linear;
+            player.Play(selected, 0.22);
+        }
     }
 
     private static Vector3 DistrictPosition(DistrictState district) =>
