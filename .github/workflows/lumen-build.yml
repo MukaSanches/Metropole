@@ -1,0 +1,70 @@
+name: LUMEN Windows Prototype
+
+on:
+  push:
+    branches: [ "lumen-prototype" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Godot 4.7.2 and templates
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $version = "4.7.2"
+          $tag = "$version-stable"
+          New-Item -ItemType Directory -Force -Path .toolcache/godot,.toolcache/templates | Out-Null
+          Invoke-WebRequest "https://github.com/godotengine/godot-builds/releases/download/$tag/Godot_v$($tag)_win64.exe.zip" -OutFile .toolcache/godot.zip
+          Invoke-WebRequest "https://github.com/godotengine/godot-builds/releases/download/$tag/Godot_v$($tag)_export_templates.tpz" -OutFile .toolcache/templates.tpz
+          Expand-Archive .toolcache/godot.zip .toolcache/godot -Force
+          Expand-Archive .toolcache/templates.tpz .toolcache/templates -Force
+          $godot = Get-ChildItem .toolcache/godot -Recurse -Filter "Godot_v4.7.2-stable_win64_console.exe" | Select-Object -First 1
+          if (!$godot) { throw "Godot executable not found" }
+          "GODOT_EXE=$($godot.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          $templateTarget = Join-Path $env:APPDATA "Godot\export_templates\$version.stable"
+          New-Item -ItemType Directory -Force -Path $templateTarget | Out-Null
+          Copy-Item ".toolcache/templates/templates/*" $templateTarget -Recurse -Force
+
+      - name: Import and validate project
+        shell: pwsh
+        run: |
+          & "$env:GODOT_EXE" --headless --path lumen --editor --quit
+          if ($LASTEXITCODE -ne 0) { throw "Godot import failed: $LASTEXITCODE" }
+
+      - name: Export Windows executable
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path lumen/build | Out-Null
+          & "$env:GODOT_EXE" --headless --path lumen --export-release "Windows Desktop" "$pwd/lumen/build/Lumen.exe"
+          if ($LASTEXITCODE -ne 0) { throw "Godot export failed: $LASTEXITCODE" }
+          if (!(Test-Path lumen/build/Lumen.exe)) { throw "Lumen.exe not produced" }
+
+      - name: Smoke test executable
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath "$pwd/lumen/build/Lumen.exe" -ArgumentList "--headless","--quit-after","30" -PassThru
+          if (!$p.WaitForExit(15000)) { Stop-Process -Id $p.Id -Force }
+          elseif ($p.ExitCode -ne 0) { throw "Smoke test failed with exit code $($p.ExitCode)" }
+
+      - name: Checksum
+        shell: pwsh
+        run: |
+          Get-FileHash lumen/build/Lumen.exe -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  Lumen.exe" } | Set-Content lumen/build/SHA256SUMS.txt
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Lumen-v0.1-Windows
+          path: |
+            lumen/build/Lumen.exe
+            lumen/build/SHA256SUMS.txt
+          if-no-files-found: error
